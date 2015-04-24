@@ -225,11 +225,11 @@ func (p *connipc) Recv() (*Message, error) {
 
 // connHeader is exchanged during the initial handshake.
 type connHeader struct {
-	Zero    byte // must be zero
-	S       byte // 'S'
-	P       byte // 'P'
-	Version byte // only zero at present
-	Proto   uint16
+	Zero    byte   // must be zero
+	S       byte   // 'S'
+	P       byte   // 'P'
+	Version byte   // only zero at present
+	Proto   uint16 // protocol type
 	Rsvd    uint16 // always zero at present
 }
 
