@@ -4,7 +4,7 @@ package ipc
 import (
 	"net"
 
-	mangos "github.com/funkygao/nano"
+	"github.com/funkygao/nano"
 )
 
 // options is used for shared GetOption/SetOption logic.
@@ -13,10 +13,10 @@ type options map[string]interface{}
 // GetOption retrieves an option value.
 func (o options) get(name string) (interface{}, error) {
 	if o == nil {
-		return nil, mangos.ErrBadOption
+		return nil, nano.ErrBadOption
 	}
 	if v, ok := o[name]; !ok {
-		return nil, mangos.ErrBadOption
+		return nil, nano.ErrBadOption
 	} else {
 		return v, nil
 	}
@@ -24,23 +24,23 @@ func (o options) get(name string) (interface{}, error) {
 
 // SetOption sets an option.  We have none, so just ErrBadOption.
 func (o options) set(string, interface{}) error {
-	return mangos.ErrBadOption
+	return nano.ErrBadOption
 }
 
 type dialer struct {
 	addr  *net.UnixAddr
-	proto mangos.Protocol
+	proto nano.Protocol
 	opts  options
 }
 
 // Dial implements the PipeDialer Dial method
-func (d *dialer) Dial() (mangos.Pipe, error) {
+func (d *dialer) Dial() (nano.Pipe, error) {
 
 	conn, err := net.DialUnix("unix", nil, d.addr)
 	if err != nil {
 		return nil, err
 	}
-	return mangos.NewConnPipeIPC(conn, d.proto)
+	return nano.NewConnPipeIPC(conn, d.proto)
 }
 
 // SetOption implements a stub PipeDialer SetOption method.
@@ -55,7 +55,7 @@ func (d *dialer) GetOption(n string) (interface{}, error) {
 
 type listener struct {
 	addr     *net.UnixAddr
-	proto    mangos.Protocol
+	proto    nano.Protocol
 	listener *net.UnixListener
 	opts     options
 }
@@ -71,13 +71,13 @@ func (l *listener) Listen() error {
 }
 
 // Accept implements the the PipeListener Accept method.
-func (l *listener) Accept() (mangos.Pipe, error) {
+func (l *listener) Accept() (nano.Pipe, error) {
 
 	conn, err := l.listener.AcceptUnix()
 	if err != nil {
 		return nil, err
 	}
-	return mangos.NewConnPipeIPC(conn, l.proto)
+	return nano.NewConnPipeIPC(conn, l.proto)
 }
 
 // Close implements the PipeListener Close method.
@@ -104,10 +104,10 @@ func (t *ipcTran) Scheme() string {
 }
 
 // NewDialer implements the Transport NewDialer method.
-func (t *ipcTran) NewDialer(addr string, proto mangos.Protocol) (mangos.PipeDialer, error) {
+func (t *ipcTran) NewDialer(addr string, proto nano.Protocol) (nano.PipeDialer, error) {
 	var err error
 
-	if addr, err = mangos.StripScheme(t, addr); err != nil {
+	if addr, err = nano.StripScheme(t, addr); err != nil {
 		return nil, err
 	}
 
@@ -119,11 +119,11 @@ func (t *ipcTran) NewDialer(addr string, proto mangos.Protocol) (mangos.PipeDial
 }
 
 // NewListener implements the Transport NewListener method.
-func (t *ipcTran) NewListener(addr string, proto mangos.Protocol) (mangos.PipeListener, error) {
+func (t *ipcTran) NewListener(addr string, proto nano.Protocol) (nano.PipeListener, error) {
 	var err error
 	l := &listener{proto: proto}
 
-	if addr, err = mangos.StripScheme(t, addr); err != nil {
+	if addr, err = nano.StripScheme(t, addr); err != nil {
 		return nil, err
 	}
 
@@ -135,6 +135,6 @@ func (t *ipcTran) NewListener(addr string, proto mangos.Protocol) (mangos.PipeLi
 }
 
 // NewTransport allocates a new IPC transport.
-func NewTransport() mangos.Transport {
+func NewTransport() nano.Transport {
 	return &ipcTran{}
 }

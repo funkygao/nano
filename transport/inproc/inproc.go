@@ -1,20 +1,20 @@
-// Package inproc implements an simple inproc transport for mangos.
+// Package inproc implements an simple inproc transport for nano.
 package inproc
 
 import (
 	"strings"
 	"sync"
 
-	mangos "github.com/funkygao/nano"
+	"github.com/funkygao/nano"
 )
 
 // inproc implements the Pipe interface on top of channels.
 type inproc struct {
-	rq     chan *mangos.Message
-	wq     chan *mangos.Message
+	rq     chan *nano.Message
+	wq     chan *nano.Message
 	closeq chan struct{}
 	readyq chan struct{}
-	proto  mangos.Protocol
+	proto  nano.Protocol
 	addr   addr
 	peer   *inproc
 }
@@ -35,7 +35,7 @@ func (addr) Network() string {
 
 type listener struct {
 	addr      string
-	proto     mangos.Protocol
+	proto     nano.Protocol
 	accepters []*inproc
 }
 
@@ -53,14 +53,14 @@ func init() {
 	listeners.cv.L = &listeners.mx
 }
 
-func (p *inproc) RecvMsg() (*mangos.Message, error) {
+func (p *inproc) RecvMsg() (*nano.Message, error) {
 	if p.peer == nil {
-		return nil, mangos.ErrClosed
+		return nil, nano.ErrClosed
 	}
 	select {
 	case m, ok := <-p.rq:
 		if m == nil || !ok {
-			return nil, mangos.ErrClosed
+			return nil, nano.ErrClosed
 		}
 		// Upper protocols expect to have to pick header and
 		// body part.  So mush them back together.
@@ -68,19 +68,19 @@ func (p *inproc) RecvMsg() (*mangos.Message, error) {
 		//msg.Header = make([]byte, 0, 32)
 		return m, nil
 	case <-p.closeq:
-		return nil, mangos.ErrClosed
+		return nil, nano.ErrClosed
 	}
 }
 
-func (p *inproc) SendMsg(m *mangos.Message) error {
+func (p *inproc) SendMsg(m *nano.Message) error {
 	if p.peer == nil {
-		return mangos.ErrClosed
+		return nano.ErrClosed
 	}
 
 	// Upper protocols expect to have to pick header and body part.
 	// Also we need to have a fresh copy of the message for receiver, to
 	// break ownership.
-	nmsg := mangos.NewMessage(len(m.Header) + len(m.Body))
+	nmsg := nano.NewMessage(len(m.Header) + len(m.Body))
 	nmsg.Body = append(nmsg.Body, m.Header...)
 	nmsg.Body = append(nmsg.Body, m.Body...)
 	select {
@@ -88,7 +88,7 @@ func (p *inproc) SendMsg(m *mangos.Message) error {
 		return nil
 	case <-p.closeq:
 		nmsg.Free()
-		return mangos.ErrClosed
+		return nano.ErrClosed
 	}
 }
 
@@ -116,21 +116,21 @@ func (p *inproc) IsOpen() bool {
 
 func (p *inproc) GetProp(name string) (interface{}, error) {
 	switch name {
-	case mangos.PropRemoteAddr:
+	case nano.PropRemoteAddr:
 		return p.addr, nil
-	case mangos.PropLocalAddr:
+	case nano.PropLocalAddr:
 		return p.addr, nil
 	}
 	// We have no special properties
-	return nil, mangos.ErrBadProperty
+	return nil, nano.ErrBadProperty
 }
 
 type dialer struct {
 	addr  string
-	proto mangos.Protocol
+	proto nano.Protocol
 }
 
-func (d *dialer) Dial() (mangos.Pipe, error) {
+func (d *dialer) Dial() (nano.Pipe, error) {
 
 	var server *inproc
 	client := &inproc{proto: d.proto, addr: addr(d.addr)}
@@ -145,11 +145,11 @@ func (d *dialer) Dial() (mangos.Pipe, error) {
 		var ok bool
 		if l, ok = listeners.byAddr[d.addr]; !ok || l == nil {
 			listeners.mx.Unlock()
-			return nil, mangos.ErrConnRefused
+			return nil, nano.ErrConnRefused
 		}
 
-		if !mangos.ValidPeers(client.proto, l.proto) {
-			return nil, mangos.ErrBadProto
+		if !nano.ValidPeers(client.proto, l.proto) {
+			return nil, nano.ErrBadProto
 		}
 
 		if len(l.accepters) != 0 {
@@ -164,8 +164,8 @@ func (d *dialer) Dial() (mangos.Pipe, error) {
 
 	listeners.mx.Unlock()
 
-	server.wq = make(chan *mangos.Message)
-	server.rq = make(chan *mangos.Message)
+	server.wq = make(chan *nano.Message)
+	server.rq = make(chan *nano.Message)
 	client.rq = server.wq
 	client.wq = server.rq
 	server.peer = client
@@ -177,18 +177,18 @@ func (d *dialer) Dial() (mangos.Pipe, error) {
 }
 
 func (*dialer) SetOption(string, interface{}) error {
-	return mangos.ErrBadOption
+	return nano.ErrBadOption
 }
 
 func (*dialer) GetOption(string) (interface{}, error) {
-	return nil, mangos.ErrBadOption
+	return nil, nano.ErrBadOption
 }
 
 func (l *listener) Listen() error {
 	listeners.mx.Lock()
 	if _, ok := listeners.byAddr[l.addr]; ok {
 		listeners.mx.Unlock()
-		return mangos.ErrAddrInUse
+		return nano.ErrAddrInUse
 	}
 	listeners.byAddr[l.addr] = l
 	listeners.cv.Broadcast()
@@ -196,7 +196,7 @@ func (l *listener) Listen() error {
 	return nil
 }
 
-func (l *listener) Accept() (mangos.Pipe, error) {
+func (l *listener) Accept() (nano.Pipe, error) {
 	server := &inproc{proto: l.proto, addr: addr(l.addr)}
 	server.readyq = make(chan struct{})
 	server.closeq = make(chan struct{})
@@ -210,16 +210,16 @@ func (l *listener) Accept() (mangos.Pipe, error) {
 	case <-server.readyq:
 		return server, nil
 	case <-server.closeq:
-		return nil, mangos.ErrClosed
+		return nil, nano.ErrClosed
 	}
 }
 
 func (*listener) SetOption(string, interface{}) error {
-	return mangos.ErrBadOption
+	return nano.ErrBadOption
 }
 
 func (*listener) GetOption(string) (interface{}, error) {
-	return nil, mangos.ErrBadOption
+	return nil, nano.ErrBadOption
 }
 
 func (l *listener) Close() error {
@@ -243,15 +243,15 @@ func (t *inprocTran) Scheme() string {
 	return "inproc"
 }
 
-func (t *inprocTran) NewDialer(addr string, proto mangos.Protocol) (mangos.PipeDialer, error) {
-	if _, err := mangos.StripScheme(t, addr); err != nil {
+func (t *inprocTran) NewDialer(addr string, proto nano.Protocol) (nano.PipeDialer, error) {
+	if _, err := nano.StripScheme(t, addr); err != nil {
 		return nil, err
 	}
 	return &dialer{addr: addr, proto: proto}, nil
 }
 
-func (t *inprocTran) NewListener(addr string, proto mangos.Protocol) (mangos.PipeListener, error) {
-	if _, err := mangos.StripScheme(t, addr); err != nil {
+func (t *inprocTran) NewListener(addr string, proto nano.Protocol) (nano.PipeListener, error) {
+	if _, err := nano.StripScheme(t, addr); err != nil {
 		return nil, err
 	}
 	l := &listener{addr: addr, proto: proto}
@@ -259,6 +259,6 @@ func (t *inprocTran) NewListener(addr string, proto mangos.Protocol) (mangos.Pip
 }
 
 // NewTransport allocates a new inproc:// transport.
-func NewTransport() mangos.Transport {
+func NewTransport() nano.Transport {
 	return &inprocTran{}
 }

@@ -1,7 +1,7 @@
 // Package all is used to register all transports.  This allows a program
 // to support all known transports as well as supporting as yet-unknown
 // transports, with a single import.
-package all
+package transport
 
 import (
 	"github.com/funkygao/nano"
@@ -11,8 +11,8 @@ import (
 	"github.com/funkygao/nano/transport/tlstcp"
 )
 
-// AddTransports adds all known transports to the given socket.
-func AddTransports(sock nano.Socket) {
+// AddAll adds all known transports to the given socket.
+func AddAll(sock nano.Socket) {
 	sock.AddTransport(tcp.NewTransport())
 	sock.AddTransport(inproc.NewTransport())
 	sock.AddTransport(ipc.NewTransport())

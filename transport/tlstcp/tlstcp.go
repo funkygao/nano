@@ -1,11 +1,11 @@
-// Package tlstcp implements the TLS over TCP transport for mangos.
+// Package tlstcp implements the TLS over TCP transport for nano.
 package tlstcp
 
 import (
 	"crypto/tls"
 	"net"
 
-	mangos "github.com/funkygao/nano"
+	"github.com/funkygao/nano"
 )
 
 type options map[string]interface{}
@@ -14,12 +14,12 @@ func (o options) get(name string) (interface{}, error) {
 	if v, ok := o[name]; ok {
 		return v, nil
 	}
-	return nil, mangos.ErrBadOption
+	return nil, nano.ErrBadOption
 }
 
 func (o options) set(name string, val interface{}) error {
 	switch name {
-	case mangos.OptionTlsConfig:
+	case nano.OptionTlsConfig:
 		switch v := val.(type) {
 		case *tls.Config:
 			// Make a private copy
@@ -29,21 +29,21 @@ func (o options) set(name string, val interface{}) error {
 			cfg.MaxVersion = tls.VersionTLS12
 			o[name] = &cfg
 		default:
-			return mangos.ErrBadValue
+			return nano.ErrBadValue
 		}
 	default:
-		return mangos.ErrBadOption
+		return nano.ErrBadOption
 	}
 	return nil
 }
 
 func (o options) configTCP(conn *net.TCPConn) error {
-	if v, ok := o[mangos.OptionNoDelay]; ok {
+	if v, ok := o[nano.OptionNoDelay]; ok {
 		if err := conn.SetNoDelay(v.(bool)); err != nil {
 			return err
 		}
 	}
-	if v, ok := o[mangos.OptionKeepAlive]; ok {
+	if v, ok := o[nano.OptionKeepAlive]; ok {
 		if err := conn.SetKeepAlive(v.(bool)); err != nil {
 			return err
 		}
@@ -54,17 +54,17 @@ func (o options) configTCP(conn *net.TCPConn) error {
 
 func newOptions(t *tlsTran) options {
 	o := make(map[string]interface{})
-	o[mangos.OptionTlsConfig] = t.config
+	o[nano.OptionTlsConfig] = t.config
 	return options(o)
 }
 
 type dialer struct {
 	addr  *net.TCPAddr
-	proto mangos.Protocol
+	proto nano.Protocol
 	opts  options
 }
 
-func (d *dialer) Dial() (mangos.Pipe, error) {
+func (d *dialer) Dial() (nano.Pipe, error) {
 
 	var config *tls.Config
 	tconn, err := net.DialTCP("tcp", nil, d.addr)
@@ -75,12 +75,12 @@ func (d *dialer) Dial() (mangos.Pipe, error) {
 		tconn.Close()
 		return nil, err
 	}
-	if v, ok := d.opts[mangos.OptionTlsConfig]; ok {
+	if v, ok := d.opts[nano.OptionTlsConfig]; ok {
 		config = v.(*tls.Config)
 	}
 	conn := tls.Client(tconn, config)
-	return mangos.NewConnPipe(conn, d.proto,
-		mangos.PropTlsConnState, conn.ConnectionState())
+	return nano.NewConnPipe(conn, d.proto,
+		nano.PropTlsConnState, conn.ConnectionState())
 }
 
 func (d *dialer) SetOption(n string, v interface{}) error {
@@ -92,7 +92,7 @@ func (d *dialer) GetOption(n string) (interface{}, error) {
 }
 
 type listener struct {
-	proto    mangos.Protocol
+	proto    nano.Protocol
 	addr     *net.TCPAddr
 	listener *net.TCPListener
 	opts     options
@@ -102,16 +102,16 @@ type listener struct {
 func (l *listener) Listen() error {
 
 	var err error
-	if v, ok := l.opts[mangos.OptionTlsConfig]; !ok {
-		return mangos.ErrTlsNoConfig
+	if v, ok := l.opts[nano.OptionTlsConfig]; !ok {
+		return nano.ErrTlsNoConfig
 	} else {
 		l.config = v.(*tls.Config)
 	}
 	if l.config == nil {
-		return mangos.ErrTlsNoConfig
+		return nano.ErrTlsNoConfig
 	}
 	if l.config.Certificates == nil || len(l.config.Certificates) == 0 {
-		return mangos.ErrTlsNoCert
+		return nano.ErrTlsNoCert
 	}
 
 	if l.listener, err = net.ListenTCP("tcp", l.addr); err != nil {
@@ -120,7 +120,7 @@ func (l *listener) Listen() error {
 	return nil
 }
 
-func (l *listener) Accept() (mangos.Pipe, error) {
+func (l *listener) Accept() (nano.Pipe, error) {
 
 	conn, err := l.listener.AcceptTCP()
 	if err != nil {
@@ -132,7 +132,7 @@ func (l *listener) Accept() (mangos.Pipe, error) {
 		return nil, err
 	}
 
-	return mangos.NewConnPipe(tls.Server(conn, l.config), l.proto)
+	return nano.NewConnPipe(tls.Server(conn, l.config), l.proto)
 }
 
 func (l *listener) Close() error {
@@ -157,10 +157,10 @@ func (t *tlsTran) Scheme() string {
 	return "tls+tcp"
 }
 
-func (t *tlsTran) NewDialer(addr string, proto mangos.Protocol) (mangos.PipeDialer, error) {
+func (t *tlsTran) NewDialer(addr string, proto nano.Protocol) (nano.PipeDialer, error) {
 	var err error
 
-	if addr, err = mangos.StripScheme(t, addr); err != nil {
+	if addr, err = nano.StripScheme(t, addr); err != nil {
 		return nil, err
 	}
 
@@ -172,11 +172,11 @@ func (t *tlsTran) NewDialer(addr string, proto mangos.Protocol) (mangos.PipeDial
 }
 
 // NewAccepter implements the Transport NewAccepter method.
-func (t *tlsTran) NewListener(addr string, proto mangos.Protocol) (mangos.PipeListener, error) {
+func (t *tlsTran) NewListener(addr string, proto nano.Protocol) (nano.PipeListener, error) {
 	var err error
 	l := &listener{proto: proto, opts: newOptions(t)}
 
-	if addr, err = mangos.StripScheme(t, addr); err != nil {
+	if addr, err = nano.StripScheme(t, addr); err != nil {
 		return nil, err
 	}
 	if l.addr, err = net.ResolveTCPAddr("tcp", addr); err != nil {
@@ -187,6 +187,6 @@ func (t *tlsTran) NewListener(addr string, proto mangos.Protocol) (mangos.PipeLi
 }
 
 // NewTransport allocates a new inproc transport.
-func NewTransport() mangos.Transport {
+func NewTransport() nano.Transport {
 	return &tlsTran{}
 }

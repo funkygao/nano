@@ -5,22 +5,22 @@ package pull
 import (
 	"time"
 
-	mangos "github.com/funkygao/nano"
+	nano "github.com/funkygao/nano"
 )
 
 type pull struct {
-	sock mangos.ProtocolSocket
+	sock nano.ProtocolSocket
 	raw  bool
 }
 
-func (x *pull) Init(sock mangos.ProtocolSocket) {
+func (x *pull) Init(sock nano.ProtocolSocket) {
 	x.sock = sock
-	x.sock.SetSendError(mangos.ErrProtoOp)
+	x.sock.SetSendError(nano.ErrProtoOp)
 }
 
 func (x *pull) Shutdown(time.Time) {} // No sender to drain
 
-func (x *pull) receiver(ep mangos.Endpoint) {
+func (x *pull) receiver(ep nano.Endpoint) {
 	rq := x.sock.RecvChannel()
 	cq := x.sock.CloseChannel()
 	for {
@@ -39,11 +39,11 @@ func (x *pull) receiver(ep mangos.Endpoint) {
 }
 
 func (*pull) Number() uint16 {
-	return mangos.ProtoPull
+	return nano.ProtoPull
 }
 
 func (*pull) PeerNumber() uint16 {
-	return mangos.ProtoPush
+	return nano.ProtoPush
 }
 
 func (*pull) Name() string {
@@ -54,44 +54,44 @@ func (*pull) PeerName() string {
 	return "push"
 }
 
-func (x *pull) AddEndpoint(ep mangos.Endpoint) {
+func (x *pull) AddEndpoint(ep nano.Endpoint) {
 	go x.receiver(ep)
 }
 
-func (x *pull) RemoveEndpoint(ep mangos.Endpoint) {}
+func (x *pull) RemoveEndpoint(ep nano.Endpoint) {}
 
-func (*pull) SendHook(msg *mangos.Message) bool {
+func (*pull) SendHook(msg *nano.Message) bool {
 	return false
 }
 
 func (x *pull) SetOption(name string, v interface{}) error {
 	var ok bool
 	switch name {
-	case mangos.OptionRaw:
+	case nano.OptionRaw:
 		if x.raw, ok = v.(bool); !ok {
-			return mangos.ErrBadValue
+			return nano.ErrBadValue
 		}
 		return nil
 	default:
-		return mangos.ErrBadOption
+		return nano.ErrBadOption
 	}
 }
 
 func (x *pull) GetOption(name string) (interface{}, error) {
 	switch name {
-	case mangos.OptionRaw:
+	case nano.OptionRaw:
 		return x.raw, nil
 	default:
-		return nil, mangos.ErrBadOption
+		return nil, nano.ErrBadOption
 	}
 }
 
 // NewProtocol() allocates a new PULL protocol object.
-func NewProtocol() mangos.Protocol {
+func NewProtocol() nano.Protocol {
 	return &pull{}
 }
 
 // NewSocket allocates a new Socket using the PULL protocol.
-func NewSocket() (mangos.Socket, error) {
-	return mangos.MakeSocket(&pull{}), nil
+func NewSocket() (nano.Socket, error) {
+	return nano.MakeSocket(&pull{}), nil
 }

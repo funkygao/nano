@@ -1,10 +1,10 @@
-// Package tcp implements the TCP transport for mangos.
+// Package tcp implements the TCP transport for nano.
 package tcp
 
 import (
 	"net"
 
-	mangos "github.com/funkygao/nano"
+	"github.com/funkygao/nano"
 )
 
 // options is used for shared GetOption/SetOption logic.
@@ -13,7 +13,7 @@ type options map[string]interface{}
 // GetOption retrieves an option value.
 func (o options) get(name string) (interface{}, error) {
 	if v, ok := o[name]; !ok {
-		return nil, mangos.ErrBadOption
+		return nil, nano.ErrBadOption
 	} else {
 		return v, nil
 	}
@@ -22,34 +22,34 @@ func (o options) get(name string) (interface{}, error) {
 // SetOption sets an option.
 func (o options) set(name string, val interface{}) error {
 	switch name {
-	case mangos.OptionNoDelay:
+	case nano.OptionNoDelay:
 		fallthrough
-	case mangos.OptionKeepAlive:
+	case nano.OptionKeepAlive:
 		switch v := val.(type) {
 		case bool:
 			o[name] = v
 			return nil
 		default:
-			return mangos.ErrBadValue
+			return nano.ErrBadValue
 		}
 	}
-	return mangos.ErrBadOption
+	return nano.ErrBadOption
 }
 
 func newOptions() options {
 	o := make(map[string]interface{})
-	o[mangos.OptionNoDelay] = true
-	o[mangos.OptionKeepAlive] = true
+	o[nano.OptionNoDelay] = true
+	o[nano.OptionKeepAlive] = true
 	return options(o)
 }
 
 func (o options) configTCP(conn *net.TCPConn) error {
-	if v, ok := o[mangos.OptionNoDelay]; ok {
+	if v, ok := o[nano.OptionNoDelay]; ok {
 		if err := conn.SetNoDelay(v.(bool)); err != nil {
 			return err
 		}
 	}
-	if v, ok := o[mangos.OptionKeepAlive]; ok {
+	if v, ok := o[nano.OptionKeepAlive]; ok {
 		if err := conn.SetKeepAlive(v.(bool)); err != nil {
 			return err
 		}
@@ -59,12 +59,11 @@ func (o options) configTCP(conn *net.TCPConn) error {
 
 type dialer struct {
 	addr  *net.TCPAddr
-	proto mangos.Protocol
+	proto nano.Protocol
 	opts  options
 }
 
-func (d *dialer) Dial() (mangos.Pipe, error) {
-
+func (d *dialer) Dial() (nano.Pipe, error) {
 	conn, err := net.DialTCP("tcp", nil, d.addr)
 	if err != nil {
 		return nil, err
@@ -73,7 +72,7 @@ func (d *dialer) Dial() (mangos.Pipe, error) {
 		conn.Close()
 		return nil, err
 	}
-	return mangos.NewConnPipe(conn, d.proto)
+	return nano.NewConnPipe(conn, d.proto)
 }
 
 func (d *dialer) SetOption(n string, v interface{}) error {
@@ -86,15 +85,15 @@ func (d *dialer) GetOption(n string) (interface{}, error) {
 
 type listener struct {
 	addr     *net.TCPAddr
-	proto    mangos.Protocol
+	proto    nano.Protocol
 	listener *net.TCPListener
 	opts     options
 }
 
-func (l *listener) Accept() (mangos.Pipe, error) {
+func (l *listener) Accept() (nano.Pipe, error) {
 
 	if l.listener == nil {
-		return nil, mangos.ErrClosed
+		return nil, nano.ErrClosed
 	}
 	conn, err := l.listener.AcceptTCP()
 	if err != nil {
@@ -104,7 +103,7 @@ func (l *listener) Accept() (mangos.Pipe, error) {
 		conn.Close()
 		return nil, err
 	}
-	return mangos.NewConnPipe(conn, l.proto)
+	return nano.NewConnPipe(conn, l.proto)
 }
 
 func (l *listener) Listen() (err error) {
@@ -133,11 +132,11 @@ func (t *tcpTran) Scheme() string {
 	return "tcp"
 }
 
-func (t *tcpTran) NewDialer(addr string, proto mangos.Protocol) (mangos.PipeDialer, error) {
+func (t *tcpTran) NewDialer(addr string, proto nano.Protocol) (nano.PipeDialer, error) {
 	var err error
 	d := &dialer{proto: proto, opts: newOptions()}
 
-	if addr, err = mangos.StripScheme(t, addr); err != nil {
+	if addr, err = nano.StripScheme(t, addr); err != nil {
 		return nil, err
 	}
 
@@ -147,11 +146,11 @@ func (t *tcpTran) NewDialer(addr string, proto mangos.Protocol) (mangos.PipeDial
 	return d, nil
 }
 
-func (t *tcpTran) NewListener(addr string, proto mangos.Protocol) (mangos.PipeListener, error) {
+func (t *tcpTran) NewListener(addr string, proto nano.Protocol) (nano.PipeListener, error) {
 	var err error
 	l := &listener{proto: proto, opts: newOptions()}
 
-	if addr, err = mangos.StripScheme(t, addr); err != nil {
+	if addr, err = nano.StripScheme(t, addr); err != nil {
 		return nil, err
 	}
 
@@ -163,6 +162,6 @@ func (t *tcpTran) NewListener(addr string, proto mangos.Protocol) (mangos.PipeLi
 }
 
 // NewTransport allocates a new TCP transport.
-func NewTransport() mangos.Transport {
+func NewTransport() nano.Transport {
 	return &tcpTran{}
 }

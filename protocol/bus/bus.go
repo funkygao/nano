@@ -7,27 +7,27 @@ import (
 	"sync"
 	"time"
 
-	mangos "github.com/funkygao/nano"
+	"github.com/funkygao/nano"
 )
 
 type busEp struct {
-	ep mangos.Endpoint
-	q  chan *mangos.Message
+	ep nano.Endpoint
+	q  chan *nano.Message
 	x  *bus
 }
 
 type bus struct {
-	sock  mangos.ProtocolSocket
+	sock  nano.ProtocolSocket
 	peers map[uint32]*busEp
 	raw   bool
-	w     mangos.Waiter
+	w     nano.Waiter
 	init  sync.Once
 
 	sync.Mutex
 }
 
 // Init implements the Protocol Init method.
-func (x *bus) Init(sock mangos.ProtocolSocket) {
+func (x *bus) Init(sock nano.ProtocolSocket) {
 	x.sock = sock
 	x.peers = make(map[uint32]*busEp)
 	x.w.Init()
@@ -43,7 +43,7 @@ func (x *bus) Shutdown(expire time.Time) {
 	x.Unlock()
 
 	for id, peer := range peers {
-		mangos.DrainChannel(peer.q, expire)
+		nano.DrainChannel(peer.q, expire)
 		close(peer.q)
 		delete(peers, id)
 	}
@@ -63,7 +63,7 @@ func (pe *busEp) peerSender() {
 	}
 }
 
-func (x *bus) broadcast(m *mangos.Message, sender uint32) {
+func (x *bus) broadcast(m *nano.Message, sender uint32) {
 
 	x.Lock()
 	for id, pe := range x.peers {
@@ -135,7 +135,7 @@ func (pe *busEp) receiver() {
 	}
 }
 
-func (x *bus) AddEndpoint(ep mangos.Endpoint) {
+func (x *bus) AddEndpoint(ep nano.Endpoint) {
 	x.init.Do(func() {
 		x.w.Add()
 		go x.sender()
@@ -144,10 +144,10 @@ func (x *bus) AddEndpoint(ep mangos.Endpoint) {
 	// help avoid dropping when bursting, if we burst before we
 	// context switch.
 	depth := 16
-	if i, err := x.sock.GetOption(mangos.OptionWriteQLen); err == nil {
+	if i, err := x.sock.GetOption(nano.OptionWriteQLen); err == nil {
 		depth = i.(int)
 	}
-	pe := &busEp{ep: ep, x: x, q: make(chan *mangos.Message, depth)}
+	pe := &busEp{ep: ep, x: x, q: make(chan *nano.Message, depth)}
 	x.Lock()
 	x.peers[ep.Id()] = pe
 	x.Unlock()
@@ -155,7 +155,7 @@ func (x *bus) AddEndpoint(ep mangos.Endpoint) {
 	go pe.receiver()
 }
 
-func (x *bus) RemoveEndpoint(ep mangos.Endpoint) {
+func (x *bus) RemoveEndpoint(ep nano.Endpoint) {
 	x.Lock()
 	if peer := x.peers[ep.Id()]; peer != nil {
 		close(peer.q)
@@ -165,7 +165,7 @@ func (x *bus) RemoveEndpoint(ep mangos.Endpoint) {
 }
 
 func (*bus) Number() uint16 {
-	return mangos.ProtoBus
+	return nano.ProtoBus
 }
 
 func (*bus) Name() string {
@@ -173,14 +173,14 @@ func (*bus) Name() string {
 }
 
 func (*bus) PeerNumber() uint16 {
-	return mangos.ProtoBus
+	return nano.ProtoBus
 }
 
 func (*bus) PeerName() string {
 	return "bus"
 }
 
-func (x *bus) RecvHook(m *mangos.Message) bool {
+func (x *bus) RecvHook(m *nano.Message) bool {
 	if !x.raw && len(m.Header) >= 4 {
 		m.Header = m.Header[4:]
 	}
@@ -190,31 +190,31 @@ func (x *bus) RecvHook(m *mangos.Message) bool {
 func (x *bus) SetOption(name string, v interface{}) error {
 	var ok bool
 	switch name {
-	case mangos.OptionRaw:
+	case nano.OptionRaw:
 		if x.raw, ok = v.(bool); !ok {
-			return mangos.ErrBadValue
+			return nano.ErrBadValue
 		}
 		return nil
 	default:
-		return mangos.ErrBadOption
+		return nano.ErrBadOption
 	}
 }
 
 func (x *bus) GetOption(name string) (interface{}, error) {
 	switch name {
-	case mangos.OptionRaw:
+	case nano.OptionRaw:
 		return x.raw, nil
 	default:
-		return nil, mangos.ErrBadOption
+		return nil, nano.ErrBadOption
 	}
 }
 
 // NewProtocol returns a new BUS protocol object.
-func NewProtocol() mangos.Protocol {
+func NewProtocol() nano.Protocol {
 	return &bus{}
 }
 
 // NewSocket allocates a new Socket using the BUS protocol.
-func NewSocket() (mangos.Socket, error) {
-	return mangos.MakeSocket(&bus{}), nil
+func NewSocket() (nano.Socket, error) {
+	return nano.MakeSocket(&bus{}), nil
 }

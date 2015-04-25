@@ -12,26 +12,26 @@ import (
 	"sync"
 	"time"
 
-	mangos "github.com/funkygao/nano"
+	nano "github.com/funkygao/nano"
 )
 
 type starEp struct {
-	ep mangos.Endpoint
-	q  chan *mangos.Message
+	ep nano.Endpoint
+	q  chan *nano.Message
 	x  *star
 }
 
 type star struct {
-	sock mangos.ProtocolSocket
+	sock nano.ProtocolSocket
 	eps  map[uint32]*starEp
 	raw  bool
-	w    mangos.Waiter
+	w    nano.Waiter
 	init sync.Once
 
 	sync.Mutex
 }
 
-func (x *star) Init(sock mangos.ProtocolSocket) {
+func (x *star) Init(sock nano.ProtocolSocket) {
 	x.sock = sock
 	x.eps = make(map[uint32]*starEp)
 	x.w.Init()
@@ -48,7 +48,7 @@ func (x *star) Shutdown(expire time.Time) {
 
 	for id, peer := range peers {
 		delete(peers, id)
-		mangos.DrainChannel(peer.q, expire)
+		nano.DrainChannel(peer.q, expire)
 		close(peer.q)
 	}
 }
@@ -68,7 +68,7 @@ func (pe *starEp) sender() {
 	}
 }
 
-func (x *star) broadcast(m *mangos.Message, sender *starEp) {
+func (x *star) broadcast(m *nano.Message, sender *starEp) {
 
 	x.Lock()
 	if sender == nil || !x.raw {
@@ -134,16 +134,16 @@ func (pe *starEp) receiver() {
 	}
 }
 
-func (x *star) AddEndpoint(ep mangos.Endpoint) {
+func (x *star) AddEndpoint(ep nano.Endpoint) {
 	x.init.Do(func() {
 		x.w.Add()
 		go x.sender()
 	})
 	depth := 16
-	if i, err := x.sock.GetOption(mangos.OptionWriteQLen); err == nil {
+	if i, err := x.sock.GetOption(nano.OptionWriteQLen); err == nil {
 		depth = i.(int)
 	}
-	pe := &starEp{ep: ep, x: x, q: make(chan *mangos.Message, depth)}
+	pe := &starEp{ep: ep, x: x, q: make(chan *nano.Message, depth)}
 	x.Lock()
 	x.eps[ep.Id()] = pe
 	x.Unlock()
@@ -151,7 +151,7 @@ func (x *star) AddEndpoint(ep mangos.Endpoint) {
 	go pe.receiver()
 }
 
-func (x *star) RemoveEndpoint(ep mangos.Endpoint) {
+func (x *star) RemoveEndpoint(ep nano.Endpoint) {
 	x.Lock()
 	if peer := x.eps[ep.Id()]; peer != nil {
 		delete(x.eps, ep.Id())
@@ -161,11 +161,11 @@ func (x *star) RemoveEndpoint(ep mangos.Endpoint) {
 }
 
 func (*star) Number() uint16 {
-	return mangos.ProtoStar
+	return nano.ProtoStar
 }
 
 func (*star) PeerNumber() uint16 {
-	return mangos.ProtoStar
+	return nano.ProtoStar
 }
 
 func (*star) Name() string {
@@ -179,31 +179,31 @@ func (*star) PeerName() string {
 func (x *star) SetOption(name string, v interface{}) error {
 	var ok bool
 	switch name {
-	case mangos.OptionRaw:
+	case nano.OptionRaw:
 		if x.raw = v.(bool); !ok {
-			return mangos.ErrBadValue
+			return nano.ErrBadValue
 		}
 		return nil
 	default:
-		return mangos.ErrBadOption
+		return nano.ErrBadOption
 	}
 }
 
 func (x *star) GetOption(name string) (interface{}, error) {
 	switch name {
-	case mangos.OptionRaw:
+	case nano.OptionRaw:
 		return x.raw, nil
 	default:
-		return nil, mangos.ErrBadOption
+		return nil, nano.ErrBadOption
 	}
 }
 
 // NewProtocol returns a new STAR protocol object.
-func NewProtocol() mangos.Protocol {
+func NewProtocol() nano.Protocol {
 	return &star{}
 }
 
 // NewSocket allocates a new Socket using the STAR protocol.
-func NewSocket() (mangos.Socket, error) {
-	return mangos.MakeSocket(&star{}), nil
+func NewSocket() (nano.Socket, error) {
+	return nano.MakeSocket(&star{}), nil
 }

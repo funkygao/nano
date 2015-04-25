@@ -7,38 +7,38 @@ import (
 	"sync"
 	"time"
 
-	mangos "github.com/funkygao/nano"
+	nano "github.com/funkygao/nano"
 )
 
 type repEp struct {
-	q    chan *mangos.Message
-	ep   mangos.Endpoint
-	sock mangos.ProtocolSocket
-	w    mangos.Waiter
+	q    chan *nano.Message
+	ep   nano.Endpoint
+	sock nano.ProtocolSocket
+	w    nano.Waiter
 	r    *rep
 }
 
 type rep struct {
-	sock         mangos.ProtocolSocket
+	sock         nano.ProtocolSocket
 	eps          map[uint32]*repEp
 	backtracebuf []byte
 	backtrace    []byte
 	backtraceL   sync.Mutex
 	raw          bool
 	ttl          int
-	w            mangos.Waiter
+	w            nano.Waiter
 	init         sync.Once
 
 	sync.Mutex
 }
 
-func (r *rep) Init(sock mangos.ProtocolSocket) {
+func (r *rep) Init(sock nano.ProtocolSocket) {
 	r.sock = sock
 	r.eps = make(map[uint32]*repEp)
 	r.backtracebuf = make([]byte, 64)
 	r.ttl = 8 // default specified in the RFC
 	r.w.Init()
-	r.sock.SetSendError(mangos.ErrProtoState)
+	r.sock.SetSendError(nano.ErrProtoState)
 }
 
 func (r *rep) Shutdown(expire time.Time) {
@@ -52,7 +52,7 @@ func (r *rep) Shutdown(expire time.Time) {
 
 	for id, peer := range peers {
 		delete(peers, id)
-		mangos.DrainChannel(peer.q, expire)
+		nano.DrainChannel(peer.q, expire)
 		close(peer.q)
 	}
 }
@@ -71,7 +71,7 @@ func (pe *repEp) sender() {
 	}
 }
 
-func (r *rep) receiver(ep mangos.Endpoint) {
+func (r *rep) receiver(ep nano.Endpoint) {
 
 	rq := r.sock.RecvChannel()
 	cq := r.sock.CloseChannel()
@@ -122,7 +122,7 @@ func (r *rep) sender() {
 	cq := r.sock.CloseChannel()
 
 	for {
-		var m *mangos.Message
+		var m *nano.Message
 
 		select {
 		case m = <-sq:
@@ -161,11 +161,11 @@ func (r *rep) sender() {
 }
 
 func (*rep) Number() uint16 {
-	return mangos.ProtoRep
+	return nano.ProtoRep
 }
 
 func (*rep) PeerNumber() uint16 {
-	return mangos.ProtoReq
+	return nano.ProtoReq
 }
 
 func (*rep) Name() string {
@@ -176,8 +176,8 @@ func (*rep) PeerName() string {
 	return "req"
 }
 
-func (r *rep) AddEndpoint(ep mangos.Endpoint) {
-	pe := &repEp{ep: ep, r: r, q: make(chan *mangos.Message, 2)}
+func (r *rep) AddEndpoint(ep nano.Endpoint) {
+	pe := &repEp{ep: ep, r: r, q: make(chan *nano.Message, 2)}
 	pe.w.Init()
 	r.Lock()
 	r.init.Do(func() {
@@ -190,7 +190,7 @@ func (r *rep) AddEndpoint(ep mangos.Endpoint) {
 	go pe.sender()
 }
 
-func (r *rep) RemoveEndpoint(ep mangos.Endpoint) {
+func (r *rep) RemoveEndpoint(ep nano.Endpoint) {
 	r.Lock()
 	delete(r.eps, ep.Id())
 	r.Unlock()
@@ -200,7 +200,7 @@ func (r *rep) RemoveEndpoint(ep mangos.Endpoint) {
 // Recv before calling Send, the saved backtrace will be lost.  This is how
 // the application discards / cancels a request to which it declines to reply.
 // This is only done in cooked mode.
-func (r *rep) RecvHook(m *mangos.Message) bool {
+func (r *rep) RecvHook(m *nano.Message) bool {
 	if r.raw {
 		return true
 	}
@@ -212,14 +212,14 @@ func (r *rep) RecvHook(m *mangos.Message) bool {
 	return true
 }
 
-func (r *rep) SendHook(m *mangos.Message) bool {
+func (r *rep) SendHook(m *nano.Message) bool {
 	// Store our saved backtrace.  Note that if none was previously stored,
 	// there is no one to reply to, and we drop the message.  We only
 	// do this in cooked mode.
 	if r.raw {
 		return true
 	}
-	r.sock.SetSendError(mangos.ErrProtoState)
+	r.sock.SetSendError(nano.ErrProtoState)
 	r.backtraceL.Lock()
 	m.Header = append(m.Header[0:0], r.backtrace...)
 	r.backtrace = nil
@@ -233,47 +233,47 @@ func (r *rep) SendHook(m *mangos.Message) bool {
 func (r *rep) SetOption(name string, v interface{}) error {
 	var ok bool
 	switch name {
-	case mangos.OptionRaw:
+	case nano.OptionRaw:
 		if r.raw, ok = v.(bool); !ok {
-			return mangos.ErrBadValue
+			return nano.ErrBadValue
 		}
 		if r.raw {
 			r.sock.SetSendError(nil)
 		} else {
-			r.sock.SetSendError(mangos.ErrProtoState)
+			r.sock.SetSendError(nano.ErrProtoState)
 		}
 		return nil
-	case mangos.OptionTtl:
+	case nano.OptionTtl:
 		if ttl, ok := v.(int); !ok {
-			return mangos.ErrBadValue
+			return nano.ErrBadValue
 		} else if ttl < 1 || ttl > 255 {
-			return mangos.ErrBadValue
+			return nano.ErrBadValue
 		} else {
 			r.ttl = ttl
 		}
 		return nil
 	default:
-		return mangos.ErrBadOption
+		return nano.ErrBadOption
 	}
 }
 
 func (r *rep) GetOption(name string) (interface{}, error) {
 	switch name {
-	case mangos.OptionRaw:
+	case nano.OptionRaw:
 		return r.raw, nil
-	case mangos.OptionTtl:
+	case nano.OptionTtl:
 		return r.ttl, nil
 	default:
-		return nil, mangos.ErrBadOption
+		return nil, nano.ErrBadOption
 	}
 }
 
 // NewProtocol returns a new REP protocol object.
-func NewProtocol() mangos.Protocol {
+func NewProtocol() nano.Protocol {
 	return &rep{}
 }
 
 // NewSocket allocates a new Socket using the REP protocol.
-func NewSocket() (mangos.Socket, error) {
-	return mangos.MakeSocket(&rep{}), nil
+func NewSocket() (nano.Socket, error) {
+	return nano.MakeSocket(&rep{}), nil
 }

@@ -6,18 +6,18 @@ import (
 	"sync"
 	"time"
 
-	mangos "github.com/funkygao/nano"
+	"github.com/funkygao/nano"
 )
 
 type pair struct {
-	sock mangos.ProtocolSocket
-	peer mangos.Endpoint
+	sock nano.ProtocolSocket
+	peer nano.Endpoint
 	raw  bool
-	w    mangos.Waiter
+	w    nano.Waiter
 	sync.Mutex
 }
 
-func (x *pair) Init(sock mangos.ProtocolSocket) {
+func (x *pair) Init(sock nano.ProtocolSocket) {
 	x.sock = sock
 	x.w.Init()
 }
@@ -26,7 +26,7 @@ func (x *pair) Shutdown(expire time.Time) {
 	x.w.WaitAbsTimeout(expire)
 }
 
-func (x *pair) sender(ep mangos.Endpoint) {
+func (x *pair) sender(ep nano.Endpoint) {
 
 	defer x.w.Done()
 	sq := x.sock.SendChannel()
@@ -47,7 +47,7 @@ func (x *pair) sender(ep mangos.Endpoint) {
 	}
 }
 
-func (x *pair) receiver(ep mangos.Endpoint) {
+func (x *pair) receiver(ep nano.Endpoint) {
 
 	rq := x.sock.RecvChannel()
 	cq := x.sock.CloseChannel()
@@ -66,7 +66,7 @@ func (x *pair) receiver(ep mangos.Endpoint) {
 	}
 }
 
-func (x *pair) AddEndpoint(ep mangos.Endpoint) {
+func (x *pair) AddEndpoint(ep nano.Endpoint) {
 	x.Lock()
 	if x.peer != nil {
 		x.Unlock()
@@ -81,7 +81,7 @@ func (x *pair) AddEndpoint(ep mangos.Endpoint) {
 	go x.sender(ep)
 }
 
-func (x *pair) RemoveEndpoint(ep mangos.Endpoint) {
+func (x *pair) RemoveEndpoint(ep nano.Endpoint) {
 	x.Lock()
 	if x.peer == ep {
 		x.peer = nil
@@ -90,7 +90,7 @@ func (x *pair) RemoveEndpoint(ep mangos.Endpoint) {
 }
 
 func (*pair) Number() uint16 {
-	return mangos.ProtoPair
+	return nano.ProtoPair
 }
 
 func (*pair) Name() string {
@@ -98,7 +98,7 @@ func (*pair) Name() string {
 }
 
 func (*pair) PeerNumber() uint16 {
-	return mangos.ProtoPair
+	return nano.ProtoPair
 }
 
 func (*pair) PeerName() string {
@@ -108,31 +108,31 @@ func (*pair) PeerName() string {
 func (x *pair) SetOption(name string, v interface{}) error {
 	var ok bool
 	switch name {
-	case mangos.OptionRaw:
+	case nano.OptionRaw:
 		if x.raw, ok = v.(bool); !ok {
-			return mangos.ErrBadValue
+			return nano.ErrBadValue
 		}
 		return nil
 	default:
-		return mangos.ErrBadOption
+		return nano.ErrBadOption
 	}
 }
 
 func (x *pair) GetOption(name string) (interface{}, error) {
 	switch name {
-	case mangos.OptionRaw:
+	case nano.OptionRaw:
 		return x.raw, nil
 	default:
-		return nil, mangos.ErrBadOption
+		return nil, nano.ErrBadOption
 	}
 }
 
 // NewProtocol returns a new PAIR protocol object.
-func NewProtocol() mangos.Protocol {
+func NewProtocol() nano.Protocol {
 	return &pair{}
 }
 
 // NewSocket allocates a new Socket using the PAIR protocol.
-func NewSocket() (mangos.Socket, error) {
-	return mangos.MakeSocket(&pair{}), nil
+func NewSocket() (nano.Socket, error) {
+	return nano.MakeSocket(&pair{}), nil
 }

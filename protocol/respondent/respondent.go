@@ -7,34 +7,34 @@ import (
 	"sync"
 	"time"
 
-	mangos "github.com/funkygao/nano"
+	nano "github.com/funkygao/nano"
 )
 
 type resp struct {
-	sock      mangos.ProtocolSocket
+	sock      nano.ProtocolSocket
 	peers     map[uint32]*respPeer
 	raw       bool
 	ttl       int
 	backbuf   []byte
 	backtrace []byte
-	w         mangos.Waiter
+	w         nano.Waiter
 	init      sync.Once
 	sync.Mutex
 }
 
 type respPeer struct {
-	q  chan *mangos.Message
-	ep mangos.Endpoint
+	q  chan *nano.Message
+	ep nano.Endpoint
 	x  *resp
 }
 
-func (x *resp) Init(sock mangos.ProtocolSocket) {
+func (x *resp) Init(sock nano.ProtocolSocket) {
 	x.sock = sock
 	x.ttl = 8
 	x.peers = make(map[uint32]*respPeer)
 	x.w.Init()
 	x.backbuf = make([]byte, 0, 64)
-	x.sock.SetSendError(mangos.ErrProtoState)
+	x.sock.SetSendError(nano.ErrProtoState)
 }
 
 func (x *resp) Shutdown(expire time.Time) {
@@ -49,7 +49,7 @@ func (x *resp) Shutdown(expire time.Time) {
 
 	for id, peer := range peers {
 		delete(peers, id)
-		mangos.DrainChannel(peer.q, expire)
+		nano.DrainChannel(peer.q, expire)
 		close(peer.q)
 	}
 }
@@ -62,7 +62,7 @@ func (x *resp) sender() {
 	cq := x.sock.CloseChannel()
 	sq := x.sock.SendChannel()
 	for {
-		var m *mangos.Message
+		var m *nano.Message
 		select {
 		case m = <-sq:
 		case <-cq:
@@ -111,7 +111,7 @@ func (peer *respPeer) sender() {
 	}
 }
 
-func (x *resp) receiver(ep mangos.Endpoint) {
+func (x *resp) receiver(ep nano.Endpoint) {
 
 	rq := x.sock.RecvChannel()
 	cq := x.sock.CloseChannel()
@@ -153,7 +153,7 @@ func (x *resp) receiver(ep mangos.Endpoint) {
 	}
 }
 
-func (x *resp) RecvHook(m *mangos.Message) bool {
+func (x *resp) RecvHook(m *nano.Message) bool {
 	if x.raw {
 		// Raw mode receivers get the message unadulterated.
 		return true
@@ -171,12 +171,12 @@ func (x *resp) RecvHook(m *mangos.Message) bool {
 	return true
 }
 
-func (x *resp) SendHook(m *mangos.Message) bool {
+func (x *resp) SendHook(m *nano.Message) bool {
 	if x.raw {
 		// Raw mode senders expected to have prepared header already.
 		return true
 	}
-	x.sock.SetSendError(mangos.ErrProtoState)
+	x.sock.SetSendError(nano.ErrProtoState)
 	x.Lock()
 	m.Header = append(m.Header[0:0], x.backtrace...)
 	x.backtrace = nil
@@ -187,12 +187,12 @@ func (x *resp) SendHook(m *mangos.Message) bool {
 	return true
 }
 
-func (x *resp) AddEndpoint(ep mangos.Endpoint) {
+func (x *resp) AddEndpoint(ep nano.Endpoint) {
 	x.init.Do(func() {
 		x.w.Add()
 		go x.sender()
 	})
-	peer := &respPeer{ep: ep, x: x, q: make(chan *mangos.Message, 1)}
+	peer := &respPeer{ep: ep, x: x, q: make(chan *nano.Message, 1)}
 
 	x.Lock()
 	x.peers[ep.Id()] = peer
@@ -202,18 +202,18 @@ func (x *resp) AddEndpoint(ep mangos.Endpoint) {
 	go peer.sender()
 }
 
-func (x *resp) RemoveEndpoint(ep mangos.Endpoint) {
+func (x *resp) RemoveEndpoint(ep nano.Endpoint) {
 	x.Lock()
 	delete(x.peers, ep.Id())
 	x.Unlock()
 }
 
 func (*resp) Number() uint16 {
-	return mangos.ProtoRespondent
+	return nano.ProtoRespondent
 }
 
 func (*resp) PeerNumber() uint16 {
-	return mangos.ProtoSurveyor
+	return nano.ProtoSurveyor
 }
 
 func (*resp) Name() string {
@@ -227,45 +227,45 @@ func (*resp) PeerName() string {
 func (x *resp) SetOption(name string, v interface{}) error {
 	var ok bool
 	switch name {
-	case mangos.OptionRaw:
+	case nano.OptionRaw:
 		if x.raw, ok = v.(bool); !ok {
-			return mangos.ErrBadValue
+			return nano.ErrBadValue
 		}
 		if x.raw {
 			x.sock.SetSendError(nil)
 		} else {
-			x.sock.SetSendError(mangos.ErrProtoState)
+			x.sock.SetSendError(nano.ErrProtoState)
 		}
 		return nil
-	case mangos.OptionTtl:
+	case nano.OptionTtl:
 		if ttl, ok := v.(int); !ok {
-			return mangos.ErrBadValue
+			return nano.ErrBadValue
 		} else if ttl < 1 || ttl > 255 {
-			return mangos.ErrBadValue
+			return nano.ErrBadValue
 		} else {
 			x.ttl = ttl
 		}
 		return nil
 	default:
-		return mangos.ErrBadOption
+		return nano.ErrBadOption
 	}
 }
 
 func (x *resp) GetOption(name string) (interface{}, error) {
 	switch name {
-	case mangos.OptionRaw:
+	case nano.OptionRaw:
 		return x.raw, nil
 	default:
-		return nil, mangos.ErrBadOption
+		return nil, nano.ErrBadOption
 	}
 }
 
 // NewProtocol returns a new RESPONDENT protocol object.
-func NewProtocol() mangos.Protocol {
+func NewProtocol() nano.Protocol {
 	return &resp{}
 }
 
 // NewSocket allocates a new Socket using the RESPONDENT protocol.
-func NewSocket() (mangos.Socket, error) {
-	return mangos.MakeSocket(&resp{}), nil
+func NewSocket() (nano.Socket, error) {
+	return nano.MakeSocket(&resp{}), nil
 }

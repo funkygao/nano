@@ -7,38 +7,38 @@ import (
 	"sync"
 	"time"
 
-	mangos "github.com/funkygao/nano"
+	nano "github.com/funkygao/nano"
 )
 
 // req is an implementation of the req protocol.
 type req struct {
 	sync.Mutex
-	sock   mangos.ProtocolSocket
-	eps    map[uint32]mangos.Endpoint
-	resend chan *mangos.Message
+	sock   nano.ProtocolSocket
+	eps    map[uint32]nano.Endpoint
+	resend chan *nano.Message
 	raw    bool
 	retry  time.Duration
 	nextid uint32
 	waker  *time.Timer
-	w      mangos.Waiter
+	w      nano.Waiter
 	init   sync.Once
 
 	// fields describing the outstanding request
-	reqmsg *mangos.Message
+	reqmsg *nano.Message
 	reqid  uint32
 }
 
-func (r *req) Init(socket mangos.ProtocolSocket) {
+func (r *req) Init(socket nano.ProtocolSocket) {
 	r.sock = socket
-	r.eps = make(map[uint32]mangos.Endpoint)
-	r.resend = make(chan *mangos.Message)
+	r.eps = make(map[uint32]nano.Endpoint)
+	r.resend = make(chan *nano.Message)
 	r.w.Init()
 
 	r.nextid = uint32(time.Now().UnixNano()) // quasi-random
 	r.retry = time.Minute * 1                // retry after a minute
 	r.waker = time.NewTimer(r.retry)
 	r.waker.Stop()
-	r.sock.SetRecvError(mangos.ErrProtoState)
+	r.sock.SetRecvError(nano.ErrProtoState)
 }
 
 func (r *req) Shutdown(expire time.Time) {
@@ -87,7 +87,7 @@ func (r *req) resender() {
 	}
 }
 
-func (r *req) receiver(ep mangos.Endpoint) {
+func (r *req) receiver(ep nano.Endpoint) {
 	rq := r.sock.RecvChannel()
 	cq := r.sock.CloseChannel()
 
@@ -113,7 +113,7 @@ func (r *req) receiver(ep mangos.Endpoint) {
 	}
 }
 
-func (r *req) sender(ep mangos.Endpoint) {
+func (r *req) sender(ep nano.Endpoint) {
 
 	// NB: Because this function is only called when an endpoint is
 	// added, we can reasonably safely cache the channels -- they won't
@@ -125,7 +125,7 @@ func (r *req) sender(ep mangos.Endpoint) {
 	rq := r.resend
 
 	for {
-		var m *mangos.Message
+		var m *nano.Message
 
 		select {
 		case m = <-rq:
@@ -142,11 +142,11 @@ func (r *req) sender(ep mangos.Endpoint) {
 }
 
 func (*req) Number() uint16 {
-	return mangos.ProtoReq
+	return nano.ProtoReq
 }
 
 func (*req) PeerNumber() uint16 {
-	return mangos.ProtoRep
+	return nano.ProtoRep
 }
 
 func (*req) Name() string {
@@ -157,7 +157,7 @@ func (*req) PeerName() string {
 	return "rep"
 }
 
-func (r *req) AddEndpoint(ep mangos.Endpoint) {
+func (r *req) AddEndpoint(ep nano.Endpoint) {
 
 	r.init.Do(func() {
 		r.w.Add()
@@ -172,9 +172,9 @@ func (r *req) AddEndpoint(ep mangos.Endpoint) {
 	go r.sender(ep)
 }
 
-func (*req) RemoveEndpoint(mangos.Endpoint) {}
+func (*req) RemoveEndpoint(nano.Endpoint) {}
 
-func (r *req) SendHook(m *mangos.Message) bool {
+func (r *req) SendHook(m *nano.Message) bool {
 
 	if r.raw {
 		// Raw mode has no automatic retry, and must include the
@@ -204,7 +204,7 @@ func (r *req) SendHook(m *mangos.Message) bool {
 	return true
 }
 
-func (r *req) RecvHook(m *mangos.Message) bool {
+func (r *req) RecvHook(m *nano.Message) bool {
 	if r.raw {
 		// Raw mode just passes up messages unmolested.
 		return true
@@ -223,56 +223,56 @@ func (r *req) RecvHook(m *mangos.Message) bool {
 	r.waker.Stop()
 	r.reqmsg.Free()
 	r.reqmsg = nil
-	r.sock.SetRecvError(mangos.ErrProtoState)
+	r.sock.SetRecvError(nano.ErrProtoState)
 	return true
 }
 
 func (r *req) SetOption(option string, value interface{}) error {
 	var ok bool
 	switch option {
-	case mangos.OptionRaw:
+	case nano.OptionRaw:
 		if r.raw, ok = value.(bool); !ok {
-			return mangos.ErrBadValue
+			return nano.ErrBadValue
 		}
 		if r.raw {
 			r.sock.SetRecvError(nil)
 		} else {
-			r.sock.SetRecvError(mangos.ErrProtoState)
+			r.sock.SetRecvError(nano.ErrProtoState)
 		}
 		return nil
-	case mangos.OptionRetryTime:
+	case nano.OptionRetryTime:
 		r.Lock()
 		r.retry, ok = value.(time.Duration)
 		r.Unlock()
 		if !ok {
-			return mangos.ErrBadValue
+			return nano.ErrBadValue
 		}
 		return nil
 	default:
-		return mangos.ErrBadOption
+		return nano.ErrBadOption
 	}
 }
 
 func (r *req) GetOption(option string) (interface{}, error) {
 	switch option {
-	case mangos.OptionRaw:
+	case nano.OptionRaw:
 		return r.raw, nil
-	case mangos.OptionRetryTime:
+	case nano.OptionRetryTime:
 		r.Lock()
 		v := r.retry
 		r.Unlock()
 		return v, nil
 	default:
-		return nil, mangos.ErrBadOption
+		return nil, nano.ErrBadOption
 	}
 }
 
 // NewReq returns a new REQ protocol object.
-func NewProtocol() mangos.Protocol {
+func NewProtocol() nano.Protocol {
 	return &req{}
 }
 
 // NewSocket allocates a new Socket using the REQ protocol.
-func NewSocket() (mangos.Socket, error) {
-	return mangos.MakeSocket(&req{}), nil
+func NewSocket() (nano.Socket, error) {
+	return nano.MakeSocket(&req{}), nil
 }

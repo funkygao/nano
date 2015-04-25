@@ -9,25 +9,25 @@ import (
 	"sync"
 	"time"
 
-	mangos "github.com/funkygao/nano"
+	nano "github.com/funkygao/nano"
 )
 
 type sub struct {
-	sock mangos.ProtocolSocket
+	sock nano.ProtocolSocket
 	subs [][]byte
 	raw  bool
 	sync.Mutex
 }
 
-func (s *sub) Init(sock mangos.ProtocolSocket) {
+func (s *sub) Init(sock nano.ProtocolSocket) {
 	s.sock = sock
 	s.subs = [][]byte{}
-	s.sock.SetSendError(mangos.ErrProtoOp)
+	s.sock.SetSendError(nano.ErrProtoOp)
 }
 
 func (*sub) Shutdown(time.Time) {} // No sender to drain.
 
-func (s *sub) receiver(ep mangos.Endpoint) {
+func (s *sub) receiver(ep nano.Endpoint) {
 
 	rq := s.sock.RecvChannel()
 	cq := s.sock.CloseChannel()
@@ -67,11 +67,11 @@ func (s *sub) receiver(ep mangos.Endpoint) {
 }
 
 func (*sub) Number() uint16 {
-	return mangos.ProtoSub
+	return nano.ProtoSub
 }
 
 func (*sub) PeerNumber() uint16 {
-	return mangos.ProtoPub
+	return nano.ProtoPub
 }
 
 func (*sub) Name() string {
@@ -82,11 +82,11 @@ func (*sub) PeerName() string {
 	return "pub"
 }
 
-func (s *sub) AddEndpoint(ep mangos.Endpoint) {
+func (s *sub) AddEndpoint(ep nano.Endpoint) {
 	go s.receiver(ep)
 }
 
-func (*sub) RemoveEndpoint(mangos.Endpoint) {}
+func (*sub) RemoveEndpoint(nano.Endpoint) {}
 
 func (s *sub) SetOption(name string, value interface{}) error {
 	s.Lock()
@@ -98,15 +98,15 @@ func (s *sub) SetOption(name string, value interface{}) error {
 	// Check names first, because type check below is only valid for
 	// subscription options.
 	switch name {
-	case mangos.OptionRaw:
+	case nano.OptionRaw:
 		if s.raw, ok = value.(bool); !ok {
-			return mangos.ErrBadValue
+			return nano.ErrBadValue
 		}
 		return nil
-	case mangos.OptionSubscribe:
-	case mangos.OptionUnsubscribe:
+	case nano.OptionSubscribe:
+	case nano.OptionUnsubscribe:
 	default:
-		return mangos.ErrBadOption
+		return nano.ErrBadOption
 	}
 
 	switch v := value.(type) {
@@ -115,10 +115,10 @@ func (s *sub) SetOption(name string, value interface{}) error {
 	case string:
 		vb = []byte(v)
 	default:
-		return mangos.ErrBadValue
+		return nano.ErrBadValue
 	}
 	switch name {
-	case mangos.OptionSubscribe:
+	case nano.OptionSubscribe:
 		for _, sub := range s.subs {
 			if bytes.Equal(sub, vb) {
 				// Already present
@@ -128,7 +128,7 @@ func (s *sub) SetOption(name string, value interface{}) error {
 		s.subs = append(s.subs, vb)
 		return nil
 
-	case mangos.OptionUnsubscribe:
+	case nano.OptionUnsubscribe:
 		for i, sub := range s.subs {
 			if bytes.Equal(sub, vb) {
 				s.subs[i] = s.subs[len(s.subs)-1]
@@ -137,28 +137,28 @@ func (s *sub) SetOption(name string, value interface{}) error {
 			}
 		}
 		// Subscription not present
-		return mangos.ErrBadValue
+		return nano.ErrBadValue
 
 	default:
-		return mangos.ErrBadOption
+		return nano.ErrBadOption
 	}
 }
 
 func (s *sub) GetOption(name string) (interface{}, error) {
 	switch name {
-	case mangos.OptionRaw:
+	case nano.OptionRaw:
 		return s.raw, nil
 	default:
-		return nil, mangos.ErrBadOption
+		return nil, nano.ErrBadOption
 	}
 }
 
 // NewProtocol returns a new SUB protocol object.
-func NewProtocol() mangos.Protocol {
+func NewProtocol() nano.Protocol {
 	return &sub{}
 }
 
 // NewSocket allocates a new Socket using the SUB protocol.
-func NewSocket() (mangos.Socket, error) {
-	return mangos.MakeSocket(&sub{}), nil
+func NewSocket() (nano.Socket, error) {
+	return nano.MakeSocket(&sub{}), nil
 }

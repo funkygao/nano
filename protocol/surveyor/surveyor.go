@@ -7,13 +7,13 @@ import (
 	"sync"
 	"time"
 
-	mangos "github.com/funkygao/nano"
+	nano "github.com/funkygao/nano"
 )
 
 const defaultSurveyTime = time.Second
 
 type surveyor struct {
-	sock     mangos.ProtocolSocket
+	sock     nano.ProtocolSocket
 	peers    map[uint32]*surveyorP
 	raw      bool
 	nextID   uint32
@@ -21,24 +21,24 @@ type surveyor struct {
 	duration time.Duration
 	timeout  time.Time
 	timer    *time.Timer
-	w        mangos.Waiter
+	w        nano.Waiter
 	init     sync.Once
 
 	sync.Mutex
 }
 
 type surveyorP struct {
-	q  chan *mangos.Message
-	ep mangos.Endpoint
+	q  chan *nano.Message
+	ep nano.Endpoint
 	x  *surveyor
 }
 
-func (x *surveyor) Init(sock mangos.ProtocolSocket) {
+func (x *surveyor) Init(sock nano.ProtocolSocket) {
 	x.sock = sock
 	x.peers = make(map[uint32]*surveyorP)
-	x.sock.SetRecvError(mangos.ErrProtoState)
+	x.sock.SetRecvError(nano.ErrProtoState)
 	x.timer = time.AfterFunc(x.duration,
-		func() { x.sock.SetRecvError(mangos.ErrProtoState) })
+		func() { x.sock.SetRecvError(nano.ErrProtoState) })
 	x.timer.Stop()
 	x.w.Init()
 }
@@ -53,7 +53,7 @@ func (x *surveyor) Shutdown(expire time.Time) {
 
 	for id, peer := range peers {
 		delete(peers, id)
-		mangos.DrainChannel(peer.q, expire)
+		nano.DrainChannel(peer.q, expire)
 		close(peer.q)
 	}
 }
@@ -63,7 +63,7 @@ func (x *surveyor) sender() {
 	sq := x.sock.SendChannel()
 	cq := x.sock.CloseChannel()
 	for {
-		var m *mangos.Message
+		var m *nano.Message
 		select {
 		case m = <-sq:
 		case <-cq:
@@ -125,8 +125,8 @@ func (peer *surveyorP) receiver() {
 	}
 }
 
-func (x *surveyor) AddEndpoint(ep mangos.Endpoint) {
-	peer := &surveyorP{ep: ep, x: x, q: make(chan *mangos.Message, 1)}
+func (x *surveyor) AddEndpoint(ep nano.Endpoint) {
+	peer := &surveyorP{ep: ep, x: x, q: make(chan *nano.Message, 1)}
 	x.init.Do(func() {
 		x.w.Add()
 		go x.sender()
@@ -138,7 +138,7 @@ func (x *surveyor) AddEndpoint(ep mangos.Endpoint) {
 	x.Unlock()
 }
 
-func (x *surveyor) RemoveEndpoint(ep mangos.Endpoint) {
+func (x *surveyor) RemoveEndpoint(ep nano.Endpoint) {
 	x.Lock()
 	defer x.Unlock()
 	peer := x.peers[ep.Id()]
@@ -149,11 +149,11 @@ func (x *surveyor) RemoveEndpoint(ep mangos.Endpoint) {
 }
 
 func (*surveyor) Number() uint16 {
-	return mangos.ProtoSurveyor
+	return nano.ProtoSurveyor
 }
 
 func (*surveyor) PeerNumber() uint16 {
-	return mangos.ProtoRespondent
+	return nano.ProtoRespondent
 }
 
 func (*surveyor) Name() string {
@@ -164,7 +164,7 @@ func (*surveyor) PeerName() string {
 	return "respondent"
 }
 
-func (x *surveyor) SendHook(m *mangos.Message) bool {
+func (x *surveyor) SendHook(m *nano.Message) bool {
 
 	if x.raw {
 		return true
@@ -186,7 +186,7 @@ func (x *surveyor) SendHook(m *mangos.Message) bool {
 	return true
 }
 
-func (x *surveyor) RecvHook(m *mangos.Message) bool {
+func (x *surveyor) RecvHook(m *nano.Message) bool {
 	if x.raw {
 		return true
 	}
@@ -207,50 +207,50 @@ func (x *surveyor) RecvHook(m *mangos.Message) bool {
 func (x *surveyor) SetOption(name string, val interface{}) error {
 	var ok bool
 	switch name {
-	case mangos.OptionRaw:
+	case nano.OptionRaw:
 		if x.raw, ok = val.(bool); !ok {
-			return mangos.ErrBadValue
+			return nano.ErrBadValue
 		}
 		if x.raw {
 			x.timer.Stop()
 			x.sock.SetRecvError(nil)
 		} else {
-			x.sock.SetRecvError(mangos.ErrProtoState)
+			x.sock.SetRecvError(nano.ErrProtoState)
 		}
 		return nil
-	case mangos.OptionSurveyTime:
+	case nano.OptionSurveyTime:
 		x.Lock()
 		x.duration, ok = val.(time.Duration)
 		x.Unlock()
 		if !ok {
-			return mangos.ErrBadValue
+			return nano.ErrBadValue
 		}
 		return nil
 	default:
-		return mangos.ErrBadOption
+		return nano.ErrBadOption
 	}
 }
 
 func (x *surveyor) GetOption(name string) (interface{}, error) {
 	switch name {
-	case mangos.OptionRaw:
+	case nano.OptionRaw:
 		return x.raw, nil
-	case mangos.OptionSurveyTime:
+	case nano.OptionSurveyTime:
 		x.Lock()
 		d := x.duration
 		x.Unlock()
 		return d, nil
 	default:
-		return nil, mangos.ErrBadOption
+		return nil, nano.ErrBadOption
 	}
 }
 
 // NewProtocol returns a new SURVEYOR protocol object.
-func NewSurveyor() mangos.Protocol {
+func NewSurveyor() nano.Protocol {
 	return &surveyor{}
 }
 
 // NewSocket allocates a new Socket using the SURVEYOR protocol.
-func NewSocket() (mangos.Socket, error) {
-	return mangos.MakeSocket(&surveyor{duration: defaultSurveyTime}), nil
+func NewSocket() (nano.Socket, error) {
+	return nano.MakeSocket(&surveyor{duration: defaultSurveyTime}), nil
 }
