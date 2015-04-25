@@ -122,7 +122,7 @@ func (x *resp) receiver(ep mangos.Endpoint) {
 			return
 		}
 
-		v := ep.GetID()
+		v := ep.Id()
 		m.Header = append(m.Header,
 			byte(v>>24), byte(v>>16), byte(v>>8), byte(v))
 		hops := 0
@@ -195,7 +195,7 @@ func (x *resp) AddEndpoint(ep mangos.Endpoint) {
 	peer := &respPeer{ep: ep, x: x, q: make(chan *mangos.Message, 1)}
 
 	x.Lock()
-	x.peers[ep.GetID()] = peer
+	x.peers[ep.Id()] = peer
 	x.Unlock()
 
 	go x.receiver(ep)
@@ -204,7 +204,7 @@ func (x *resp) AddEndpoint(ep mangos.Endpoint) {
 
 func (x *resp) RemoveEndpoint(ep mangos.Endpoint) {
 	x.Lock()
-	delete(x.peers, ep.GetID())
+	delete(x.peers, ep.Id())
 	x.Unlock()
 }
 

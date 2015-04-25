@@ -50,7 +50,7 @@ func newPipe(tranpipe Pipe) *pipe {
 	return p
 }
 
-func (p *pipe) GetID() uint32 {
+func (p *pipe) Id() uint32 {
 	pipes.Lock()
 	defer pipes.Unlock()
 	return p.id

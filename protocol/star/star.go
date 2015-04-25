@@ -145,7 +145,7 @@ func (x *star) AddEndpoint(ep mangos.Endpoint) {
 	}
 	pe := &starEp{ep: ep, x: x, q: make(chan *mangos.Message, depth)}
 	x.Lock()
-	x.eps[ep.GetID()] = pe
+	x.eps[ep.Id()] = pe
 	x.Unlock()
 	go pe.sender()
 	go pe.receiver()
@@ -153,8 +153,8 @@ func (x *star) AddEndpoint(ep mangos.Endpoint) {
 
 func (x *star) RemoveEndpoint(ep mangos.Endpoint) {
 	x.Lock()
-	if peer := x.eps[ep.GetID()]; peer != nil {
-		delete(x.eps, ep.GetID())
+	if peer := x.eps[ep.Id()]; peer != nil {
+		delete(x.eps, ep.Id())
 		close(peer.q)
 	}
 	x.Unlock()

@@ -165,7 +165,7 @@ func (r *req) AddEndpoint(ep mangos.Endpoint) {
 	})
 
 	r.Lock()
-	r.eps[ep.GetID()] = ep
+	r.eps[ep.Id()] = ep
 	r.Unlock()
 	go r.receiver(ep)
 	r.w.Add()

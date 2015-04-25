@@ -106,7 +106,7 @@ func (p *pub) AddEndpoint(ep mangos.Endpoint) {
 	pe := &pubEp{ep: ep, p: p, q: make(chan *mangos.Message, depth)}
 	pe.w.Init()
 	p.Lock()
-	p.eps[ep.GetID()] = pe
+	p.eps[ep.Id()] = pe
 	p.Unlock()
 
 	pe.w.Add()
@@ -116,7 +116,7 @@ func (p *pub) AddEndpoint(ep mangos.Endpoint) {
 
 func (p *pub) RemoveEndpoint(ep mangos.Endpoint) {
 	p.Lock()
-	delete(p.eps, ep.GetID())
+	delete(p.eps, ep.Id())
 	p.Unlock()
 }
 

@@ -8,9 +8,9 @@ import (
 // to the underlying stream transport.  It can be thought of as one side
 // of a TCP, IPC, or other type of connection.
 type Endpoint interface {
-	// GetID returns a unique 31-bit value associated with the Endpoint.
+	// Id returns a unique 31-bit value associated with the Endpoint.
 	// The value is unique for a given socket, at a given time.
-	GetID() uint32
+	Id() uint32
 
 	// Close does what you think.
 	Close() error

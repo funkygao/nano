@@ -132,7 +132,7 @@ func (x *surveyor) AddEndpoint(ep mangos.Endpoint) {
 		go x.sender()
 	})
 	x.Lock()
-	x.peers[ep.GetID()] = peer
+	x.peers[ep.Id()] = peer
 	go peer.receiver()
 	go peer.sender()
 	x.Unlock()
@@ -141,11 +141,11 @@ func (x *surveyor) AddEndpoint(ep mangos.Endpoint) {
 func (x *surveyor) RemoveEndpoint(ep mangos.Endpoint) {
 	x.Lock()
 	defer x.Unlock()
-	peer := x.peers[ep.GetID()]
+	peer := x.peers[ep.Id()]
 	if peer == nil {
 		return
 	}
-	delete(x.peers, ep.GetID())
+	delete(x.peers, ep.Id())
 }
 
 func (*surveyor) Number() uint16 {

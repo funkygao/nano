@@ -119,7 +119,7 @@ func (pe *busEp) receiver() {
 		if m == nil {
 			return
 		}
-		v := pe.ep.GetID()
+		v := pe.ep.Id()
 		m.Header = append(m.Header,
 			byte(v>>24), byte(v>>16), byte(v>>8), byte(v))
 
@@ -149,7 +149,7 @@ func (x *bus) AddEndpoint(ep mangos.Endpoint) {
 	}
 	pe := &busEp{ep: ep, x: x, q: make(chan *mangos.Message, depth)}
 	x.Lock()
-	x.peers[ep.GetID()] = pe
+	x.peers[ep.Id()] = pe
 	x.Unlock()
 	go pe.peerSender()
 	go pe.receiver()
@@ -157,9 +157,9 @@ func (x *bus) AddEndpoint(ep mangos.Endpoint) {
 
 func (x *bus) RemoveEndpoint(ep mangos.Endpoint) {
 	x.Lock()
-	if peer := x.peers[ep.GetID()]; peer != nil {
+	if peer := x.peers[ep.Id()]; peer != nil {
 		close(peer.q)
-		delete(x.peers, ep.GetID())
+		delete(x.peers, ep.Id())
 	}
 	x.Unlock()
 }

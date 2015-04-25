@@ -83,7 +83,7 @@ func (r *rep) receiver(ep mangos.Endpoint) {
 			return
 		}
 
-		v := ep.GetID()
+		v := ep.Id()
 		m.Header = append(m.Header,
 			byte(v>>24), byte(v>>16), byte(v>>8), byte(v))
 
@@ -184,7 +184,7 @@ func (r *rep) AddEndpoint(ep mangos.Endpoint) {
 		r.w.Add()
 		go r.sender()
 	})
-	r.eps[ep.GetID()] = pe
+	r.eps[ep.Id()] = pe
 	r.Unlock()
 	go r.receiver(ep)
 	go pe.sender()
@@ -192,7 +192,7 @@ func (r *rep) AddEndpoint(ep mangos.Endpoint) {
 
 func (r *rep) RemoveEndpoint(ep mangos.Endpoint) {
 	r.Lock()
-	delete(r.eps, ep.GetID())
+	delete(r.eps, ep.Id())
 	r.Unlock()
 }
 
