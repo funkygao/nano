@@ -8,6 +8,13 @@ import (
 
 type options map[string]interface{}
 
+func newOptions() options {
+	opt := make(options)
+	opt[nano.OptionNoDelay] = true
+	opt[nano.OptionKeepAlive] = true
+	return opt
+}
+
 func (o options) get(name string) (interface{}, error) {
 	if v, ok := o[name]; !ok {
 		return nil, nano.ErrBadOption
@@ -30,13 +37,6 @@ func (o options) set(name string, val interface{}) error {
 		}
 	}
 	return nano.ErrBadOption
-}
-
-func newOptions() options {
-	o := make(map[string]interface{})
-	o[nano.OptionNoDelay] = true
-	o[nano.OptionKeepAlive] = true
-	return options(o)
 }
 
 func (o options) configTCP(conn *net.TCPConn) error {
