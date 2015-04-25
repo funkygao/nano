@@ -16,16 +16,16 @@ type Message struct {
 	headerBuf []byte
 	bodyBuf   []byte
 
-	bodySize int
+	slabSize int
 	refCount int32
 }
 
-type msgCacheInfo struct {
+type messageSlab struct {
 	maxBody int
 	cache   chan *Message
 }
 
-var messagePool = []msgCacheInfo{
+var messagePool = []messageSlab{
 	{maxBody: 64, cache: make(chan *Message, 2048)},   // 128K
 	{maxBody: 128, cache: make(chan *Message, 1024)},  // 128K
 	{maxBody: 1024, cache: make(chan *Message, 1024)}, // 1 MB
@@ -45,9 +45,9 @@ func (this *Message) Free() {
 
 	// safe to put back cache pool for later reuse
 	var ch chan *Message
-	for _, info := range messagePool {
-		if this.bodySize == info.maxBody {
-			ch = info.cache
+	for _, slab := range messagePool {
+		if this.slabSize == slab.maxBody {
+			ch = slab.cache
 			break
 		}
 	}
@@ -55,7 +55,7 @@ func (this *Message) Free() {
 	select {
 	case ch <- this:
 	default:
-		// cache pool is full, just discard it
+		// message pool is full, just discard it
 	}
 }
 
@@ -71,31 +71,37 @@ func (this *Message) Dup() *Message {
 	return this
 }
 
+// TODO
+func (this *Message) Clone() *Message {
+	return nil
+}
+
 // NewMessage is the supported way to obtain a new Message.  This makes
 // use of a "cache" which greatly reduces the load on the garbage collector.
 func NewMessage(sz int) *Message {
-	var m *Message
+	var msg *Message
 	var ch chan *Message
-	for _, info := range messagePool {
-		if sz < info.maxBody {
-			ch = info.cache
-			sz = info.maxBody // TODO waste memory?
+	for _, slab := range messagePool {
+		if sz <= slab.maxBody {
+			ch = slab.cache
+			sz = slab.maxBody
 			break
 		}
 	}
 
 	select {
-	case m = <-ch:
+	case msg = <-ch:
 	default:
 		// message pool empty
-		m = &Message{}
-		m.bodyBuf = make([]byte, 0, sz)
-		m.headerBuf = make([]byte, 0, 32) // TODO
-		m.bodySize = sz
+		msg = &Message{}
+		msg.slabSize = sz
+		msg.bodyBuf = make([]byte, 0, msg.slabSize)
+		msg.headerBuf = make([]byte, 0, 32) // TODO
+
 	}
 
-	m.refCount = 1
-	m.Body = m.bodyBuf
-	m.Header = m.headerBuf
-	return m
+	msg.refCount = 1
+	msg.Body = msg.bodyBuf
+	msg.Header = msg.headerBuf
+	return msg
 }
