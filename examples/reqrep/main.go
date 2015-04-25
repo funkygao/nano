@@ -1,11 +1,13 @@
 package main
 
 import (
+	"github.com/funkygao/nano"
 	"github.com/funkygao/nano/protocol/rep"
 	"github.com/funkygao/nano/protocol/req"
 	"github.com/funkygao/nano/transport/tcp"
 	"log"
 	"os"
+	"time"
 )
 
 const (
@@ -45,6 +47,7 @@ func request() {
 	socket.AddTransport(tcp.NewTransport())
 	err = socket.Dial(addr)
 	dieIfErr(err)
+	dieIfErr(socket.SetOption(nano.OptionSendDeadline, time.Second))
 
 	for {
 		err = socket.Send([]byte("hello"))
