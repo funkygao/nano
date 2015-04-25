@@ -15,15 +15,15 @@ var pipes struct {
 // pipe wraps the Pipe data structure with the stuff we need to keep
 // for the core.  It implements the Endpoint interface.
 type pipe struct {
-	pipe   Pipe
-	closeq chan struct{} // only closed, never passes data
-	id     uint32
-	index  int // index in master list of pipes for socket
+	pipe      Pipe
+	closeChan chan struct{} // only closed, never passes data
+	id        uint32
+	index     int // index in master list of pipes for socket
 
-	l       *listener
-	d       *dialer
-	sock    *socket
-	closing bool // true if we were closed
+	listener *listener
+	dialer   *dialer
+	sock     *socket
+	closing  bool // true if we were closed
 
 	sync.Mutex
 }
@@ -35,7 +35,7 @@ func init() {
 
 func newPipe(tranpipe Pipe) *pipe {
 	p := &pipe{pipe: tranpipe, index: -1}
-	p.closeq = make(chan struct{})
+	p.closeChan = make(chan struct{})
 	for {
 		pipes.Lock()
 		p.id = pipes.nextid & 0x7fffffff
@@ -68,7 +68,7 @@ func (p *pipe) Close() error {
 	}
 	p.closing = true
 	p.Unlock()
-	close(p.closeq)
+	close(p.closeChan)
 	if sock != nil {
 		sock.remPipe(p)
 	}
@@ -102,10 +102,10 @@ func (p *pipe) RecvMsg() *Message {
 
 func (p *pipe) Address() string {
 	switch {
-	case p.l != nil:
-		return p.l.Address()
-	case p.d != nil:
-		return p.d.Address()
+	case p.listener != nil:
+		return p.listener.Address()
+	case p.dialer != nil:
+		return p.dialer.Address()
 	}
 	return ""
 }
@@ -119,25 +119,25 @@ func (p *pipe) IsOpen() bool {
 }
 
 func (p *pipe) IsClient() bool {
-	return p.d != nil
+	return p.dialer != nil
 }
 
 func (p *pipe) IsServer() bool {
-	return p.l != nil
+	return p.listener != nil
 }
 
 func (p *pipe) LocalProtocol() uint16 {
-	return p.LocalProtocol()
+	return p.pipe.LocalProtocol()
 }
 
 func (p *pipe) RemoteProtocol() uint16 {
-	return p.RemoteProtocol()
+	return p.pipe.RemoteProtocol()
 }
 
 func (p *pipe) Dialer() Dialer {
-	return p.d
+	return p.dialer
 }
 
 func (p *pipe) Listener() Listener {
-	return p.l
+	return p.listener
 }
