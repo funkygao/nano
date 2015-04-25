@@ -10,83 +10,85 @@ import (
 )
 
 type pair struct {
-	sock nano.ProtocolSocket
-	peer nano.Endpoint
-	raw  bool
-	w    nano.Waiter
+	sock   nano.ProtocolSocket
+	peer   nano.Endpoint
+	raw    bool
+	waiter nano.Waiter
 	sync.Mutex
 }
 
-func (x *pair) Init(sock nano.ProtocolSocket) {
-	x.sock = sock
-	x.w.Init()
+func (this *pair) Init(sock nano.ProtocolSocket) {
+	this.sock = sock
+	this.waiter.Init()
 }
 
-func (x *pair) Shutdown(expire time.Time) {
-	x.w.WaitAbsTimeout(expire)
+func (this *pair) Shutdown(expire time.Time) {
+	this.waiter.WaitAbsTimeout(expire)
 }
 
-func (x *pair) sender(ep nano.Endpoint) {
+func (this *pair) sender(endpoint nano.Endpoint) {
+	defer this.waiter.Done()
 
-	defer x.w.Done()
-	sq := x.sock.SendChannel()
-	cq := x.sock.CloseChannel()
+	sendChan := this.sock.SendChannel()
+	closeChan := this.sock.CloseChannel()
 
 	// This is pretty easy because we have only one peer at a time.
 	// If the peer goes away, we'll just drop the message on the floor.
 	for {
 		select {
-		case m := <-sq:
-			if ep.SendMsg(m) != nil {
-				m.Free()
+		case msg := <-sendChan:
+			if endpoint.SendMsg(msg) != nil {
+				msg.Free()
 				return
 			}
-		case <-cq:
+
+		case <-closeChan:
 			return
 		}
 	}
 }
 
-func (x *pair) receiver(ep nano.Endpoint) {
-
-	rq := x.sock.RecvChannel()
-	cq := x.sock.CloseChannel()
+func (x *pair) receiver(endpoint nano.Endpoint) {
+	recvChan := x.sock.RecvChannel()
+	closeChan := x.sock.CloseChannel()
 
 	for {
-		m := ep.RecvMsg()
-		if m == nil {
+		msg := endpoint.RecvMsg()
+		if msg == nil {
 			return
 		}
 
 		select {
-		case rq <- m:
-		case <-cq:
+		case recvChan <- msg:
+		case <-closeChan:
 			return
 		}
 	}
 }
 
-func (x *pair) AddEndpoint(ep nano.Endpoint) {
-	x.Lock()
-	if x.peer != nil {
-		x.Unlock()
-		ep.Close()
+func (this *pair) AddEndpoint(endpoint nano.Endpoint) {
+	this.Lock()
+	if this.peer != nil {
+		// TODO not good design
+		this.Unlock()
+		endpoint.Close()
 		return
 	}
-	x.peer = ep
-	x.Unlock()
 
-	x.w.Add()
-	go x.receiver(ep)
-	go x.sender(ep)
+	this.peer = endpoint
+	this.Unlock()
+
+	this.waiter.Add()
+	go this.receiver(endpoint)
+	go this.sender(endpoint)
 }
 
-func (x *pair) RemoveEndpoint(ep nano.Endpoint) {
-	x.Lock()
-	if x.peer == ep {
-		x.peer = nil
+func (this *pair) RemoveEndpoint(endpoint nano.Endpoint) {
+	this.Lock()
+	if this.peer == endpoint {
+		this.peer = nil
 	}
-	x.Unlock()
+	this.Unlock()
 }
 
 func (*pair) Number() uint16 {
@@ -105,11 +107,11 @@ func (*pair) PeerName() string {
 	return "pair"
 }
 
-func (x *pair) SetOption(name string, v interface{}) error {
+func (this *pair) SetOption(name string, val interface{}) error {
 	var ok bool
 	switch name {
 	case nano.OptionRaw:
-		if x.raw, ok = v.(bool); !ok {
+		if this.raw, ok = val.(bool); !ok {
 			return nano.ErrBadValue
 		}
 		return nil
@@ -118,10 +120,10 @@ func (x *pair) SetOption(name string, v interface{}) error {
 	}
 }
 
-func (x *pair) GetOption(name string) (interface{}, error) {
+func (this *pair) GetOption(name string) (interface{}, error) {
 	switch name {
 	case nano.OptionRaw:
-		return x.raw, nil
+		return this.raw, nil
 	default:
 		return nil, nano.ErrBadOption
 	}

@@ -20,6 +20,19 @@ Partial failure is handled by the protocol, not by the user. In fact, it is tran
 tcp://interface:port 
 
 
+    sock, err := protocol.xxx.NewSocket()
+    sock.AddTransport(transport.yy.NewTransport())
+    sock.SetOption(k, v)
+
+    client:
+        err := sock.Dial()
+        sock.SendMsg(msg)
+
+    server:
+        err := sock.Listen()
+        msg, err := sock.RecvMsg()
+
+
 ### Term
 
 - Endpoint
@@ -29,6 +42,9 @@ tcp://interface:port
   
 - Pipe
   goroutine safe full-duplex message-oriented connection between 2 peers
+
+- Transport
+  Responsible to provide concrete PipeDialer and PipeListener
 
 
 ### SP RFC
