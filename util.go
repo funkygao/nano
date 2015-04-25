@@ -12,7 +12,6 @@ import (
 // i.e. never selectable.  This allows the output to be readily used
 // with deadlines in network connections, etc.
 func mkTimer(deadline time.Duration) <-chan time.Time {
-
 	if deadline == 0 {
 		return nil
 	}
@@ -36,6 +35,14 @@ func debugf(format string, args ...interface{}) {
 		fmt.Printf("DEBUG: %s:%d [%s]: %s\n", file, line,
 			time.Now().String(), fmt.Sprintf(format, args...))
 	}
+}
+
+func StripScheme(t Transport, addr string) (string, error) {
+	s := t.Scheme() + "://"
+	if !strings.HasPrefix(addr, s) {
+		return addr, ErrBadTran
+	}
+	return addr[len(s):], nil
 }
 
 func DrainChannel(ch chan<- *Message, expire time.Time) bool {

@@ -25,15 +25,15 @@ type socket struct {
 
 	rdeadline  time.Duration
 	wdeadline  time.Duration
-	reconntime time.Duration // reconnect time after error or disconnect
-	reconnmax  time.Duration // max reconnect interval before give up? TODO
+	reconnTime time.Duration // reconnect time after error or disconnect
+	reconnMax  time.Duration // max reconnect interval before give up? TODO SetOption
 	linger     time.Duration
 
 	pipes []*pipe
 
 	listeners []*listener
 
-	transports map[string]Transport
+	transports map[string]Transport // key is transport scheme
 
 	// These are conditional "type aliases" for our self
 	sendhook ProtocolSendHook
@@ -43,13 +43,48 @@ type socket struct {
 	porthook PortHook
 }
 
+// MakeSocket is intended for use by Protocol implementations.  The intention
+// is that they can wrap this to provide a "proto.NewSocket()" implementation.
+func MakeSocket(proto Protocol) *socket {
+	sock := &socket{
+		sendChanSize: defaultQLen,
+		recvChanSize: defaultQLen,
+		sendChan:     make(chan *Message, defaultQLen),
+		recvChan:     make(chan *Message, defaultQLen),
+		closeChan:    make(chan struct{}),
+		reconnTime:   time.Millisecond * 100, // TODO
+		reconnMax:    time.Minute,
+		linger:       time.Second, // TODO
+		proto:        proto,
+		transports:   make(map[string]Transport), // TODO key is string?
+		pipes:        make([]*pipe, 0),
+		listeners:    make([]*listener, 0),
+	}
+
+	// Add some conditionals now -- saves checks later
+	if i, ok := proto.(ProtocolRecvHook); ok {
+		sock.recvhook = i
+	}
+	if i, ok := proto.(ProtocolSendHook); ok {
+		sock.sendhook = i
+	}
+
+	proto.Init(sock)
+
+	return sock
+}
+
 func (sock *socket) addPipe(tranpipe Pipe, d *dialer, l *listener) *pipe {
 	p := newPipe(tranpipe)
-	p.d = d
-	p.l = l
+	p.dialer = d
+	p.listener = l
 
-	// Either listener or dialer is non-nil -- this could be an assert
-	if l == nil && p == nil {
+	// dialer or listener must be provied only one
+	if l == nil && d == nil {
+		p.Close()
+		return nil
+	}
+	if l != nil && d != nil {
 		p.Close()
 		return nil
 	}
@@ -71,8 +106,7 @@ func (sock *socket) addPipe(tranpipe Pipe, d *dialer, l *listener) *pipe {
 	return p
 }
 
-func (sock *socket) remPipe(p *pipe) {
-
+func (sock *socket) removePipe(p *pipe) {
 	sock.proto.RemoveEndpoint(p)
 
 	sock.Lock()
@@ -84,41 +118,6 @@ func (sock *socket) remPipe(p *pipe) {
 	}
 	sock.Unlock()
 }
-
-func newSocket(proto Protocol) *socket {
-	sock := new(socket)
-	sock.sendChanSize = defaultQLen
-	sock.recvChanSize = defaultQLen
-	sock.sendChan = make(chan *Message, sock.sendChanSize)
-	sock.recvChan = make(chan *Message, sock.recvChanSize)
-	sock.closeChan = make(chan struct{})
-	sock.reconntime = time.Millisecond * 100 // make it a tunable?
-	sock.reconnmax = time.Minute             // TODO
-	sock.linger = time.Second                // TODO
-	sock.proto = proto
-	sock.transports = make(map[string]Transport)
-
-	// Add some conditionals now -- saves checks later
-	if i, ok := interface{}(proto).(ProtocolRecvHook); ok {
-		sock.recvhook = i.(ProtocolRecvHook)
-	}
-	if i, ok := interface{}(proto).(ProtocolSendHook); ok {
-		sock.sendhook = i.(ProtocolSendHook)
-	}
-
-	proto.Init(sock)
-
-	return sock
-}
-
-// MakeSocket is intended for use by Protocol implementations.  The intention
-// is that they can wrap this to provide a "proto.NewSocket()" implementation.
-func MakeSocket(proto Protocol) *socket {
-	return newSocket(proto)
-}
-
-// Implementation of ProtocolSocket bits on socket.  This is the middle
-// API presented to Protocol implementations.
 
 func (sock *socket) SendChannel() <-chan *Message {
 	return sock.sendChan
@@ -143,11 +142,6 @@ func (sock *socket) SetRecvError(err error) {
 	sock.recverr = err
 	sock.Unlock()
 }
-
-//
-// Implementation of Socket bits on socket.  This is the upper API
-// presented to applications.
-//
 
 func (sock *socket) Close() error {
 	fin := time.Now().Add(sock.linger)
@@ -184,19 +178,20 @@ func (sock *socket) Close() error {
 
 func (sock *socket) SendMsg(msg *Message) error {
 	sock.Lock()
-	e := sock.senderr
+	e := sock.senderr // copy err
+	sock.Unlock()
 	if e != nil {
-		sock.Unlock()
 		return e
 	}
-	sock.Unlock()
+
 	if sock.sendhook != nil {
 		if ok := sock.sendhook.SendHook(msg); !ok {
-			// just drop it silently
+			// just drop it silently TODO ErrSendHook?
 			msg.Free()
 			return nil
 		}
 	}
+
 	sock.Lock()
 	timeout := mkTimer(sock.wdeadline)
 	sock.Unlock()
@@ -211,7 +206,7 @@ func (sock *socket) SendMsg(msg *Message) error {
 }
 
 func (sock *socket) Send(b []byte) error {
-    // TODO borrow from message pool
+	// TODO borrow from message pool
 	msg := &Message{Body: b, Header: nil, refCount: 1}
 	return sock.SendMsg(msg)
 }
@@ -254,11 +249,10 @@ func (sock *socket) Recv() ([]byte, error) {
 }
 
 func (sock *socket) getTransport(addr string) Transport {
-	var i int
-
 	sock.Lock()
 	defer sock.Unlock()
 
+	var i int
 	if i = strings.Index(addr, "://"); i < 0 {
 		return nil
 	}
@@ -277,11 +271,11 @@ func (sock *socket) AddTransport(t Transport) {
 }
 
 func (sock *socket) DialOptions(addr string, opts map[string]interface{}) error {
-
 	d, err := sock.NewDialer(addr, opts)
 	if err != nil {
 		return err
 	}
+
 	return d.Dial()
 }
 
@@ -290,12 +284,13 @@ func (sock *socket) Dial(addr string) error {
 }
 
 func (sock *socket) NewDialer(addr string, options map[string]interface{}) (Dialer, error) {
-	var err error
 	d := &dialer{sock: sock, addr: addr, closeChan: make(chan struct{})}
 	t := sock.getTransport(addr)
 	if t == nil {
 		return nil, ErrBadTran
 	}
+
+	var err error
 	if d.d, err = t.NewDialer(addr, sock.proto); err != nil {
 		return nil, err
 	}
@@ -459,76 +454,82 @@ type dialer struct {
 	closeChan chan struct{}
 }
 
-func (d *dialer) Dial() error {
-	d.sock.Lock()
-	if d.active {
-		d.sock.Unlock()
+func (this *dialer) Dial() error {
+	this.sock.Lock()
+	if this.active {
+		this.sock.Unlock()
 		return ErrAddrInUse
 	}
-	d.closeChan = make(chan struct{})
-	d.sock.active = true
-	d.active = true
-	d.sock.Unlock()
-	go d.dialer()
+
+	this.closeChan = make(chan struct{})
+	this.sock.active = true
+	this.active = true
+	this.sock.Unlock()
+
+	go this.dialer()
 	return nil
 }
 
-func (d *dialer) Close() error {
-	d.sock.Lock()
-	if d.closed {
-		d.sock.Unlock()
+func (this *dialer) Close() error {
+	this.sock.Lock()
+	if this.closed {
+		this.sock.Unlock()
 		return ErrClosed
 	}
-	d.closed = true
-	close(d.closeChan)
-	d.sock.Unlock()
+
+	this.closed = true
+	close(this.closeChan)
+	this.sock.Unlock()
 	return nil
 }
 
-func (d *dialer) GetOption(n string) (interface{}, error) {
-	return d.d.GetOption(n)
+func (this *dialer) GetOption(name string) (interface{}, error) {
+	return this.d.GetOption(name)
 }
 
-func (d *dialer) SetOption(n string, v interface{}) error {
-	return d.d.SetOption(n, v)
+func (this *dialer) SetOption(name string, val interface{}) error {
+	return this.d.SetOption(name, val)
 }
 
-func (d *dialer) Address() string {
-	return d.addr
+func (this *dialer) Address() string {
+	return this.addr
 }
 
 // dialer is used to dial or redial from a goroutine.
-func (d *dialer) dialer() {
-	rtime := d.sock.reconntime
-	rtmax := d.sock.reconnmax
+func (this *dialer) dialer() {
+	rtime := this.sock.reconnTime
+	rtmax := this.sock.reconnMax
 	for {
-		p, err := d.d.Dial()
+		pipe, err := this.d.Dial()
+		debugf("%s", err)
 		if err == nil {
 			// reset retry time
-			rtime = d.sock.reconntime
-			d.sock.Lock()
-			if d.closed {
-				p.Close()
+			rtime = this.sock.reconnTime
+			this.sock.Lock()
+			if this.closed {
+				pipe.Close()
 				return
 			}
-			d.sock.Unlock()
-			if cp := d.sock.addPipe(p, d, nil); cp != nil {
+
+			this.sock.Unlock()
+			if cp := this.sock.addPipe(pipe, this, nil); cp != nil {
 				select {
-				case <-d.sock.closeChan: // parent socket closed
-				case <-cp.closeq: // disconnect event
-				case <-d.closeChan: // dialer closed
+				case <-this.sock.closeChan: // parent socket closed
+				case <-cp.closeChan: // disconnect event
+				case <-this.closeChan: // dialer closed
 				}
 			}
 		}
 
 		// we're redialing here
 		select {
-		case <-d.closeChan: // dialer closed
+		case <-this.closeChan: // dialer closed
 			return
-		case <-d.sock.closeChan: // exit if parent socket closed
+		case <-this.sock.closeChan: // exit if parent socket closed
 			return
 		case <-time.After(rtime):
 			rtime *= 2
+			debugf("%s", rtime)
 			if rtime > rtmax {
 				rtime = rtmax
 			}

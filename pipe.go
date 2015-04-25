@@ -70,7 +70,7 @@ func (p *pipe) Close() error {
 	p.Unlock()
 	close(p.closeChan)
 	if sock != nil {
-		sock.remPipe(p)
+		sock.removePipe(p)
 	}
 	p.pipe.Close()
 	pipes.Lock()
