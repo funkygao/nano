@@ -20,6 +20,16 @@ Partial failure is handled by the protocol, not by the user. In fact, it is tran
 tcp://interface:port 
 
 
+### Term
+
+- Endpoint
+  Message based, can be thought of as one side of tcp/ipc/etc
+
+- Protocol
+  
+- Pipe
+  goroutine safe full-duplex message-oriented connection between 2 peers
+
 
 ### SP RFC
 

@@ -501,12 +501,12 @@ func (this *dialer) dialer() {
 	rtmax := this.sock.reconnMax
 	for {
 		pipe, err := this.d.Dial()
-		debugf("%s", err)
 		if err == nil {
 			// reset retry time
 			rtime = this.sock.reconnTime
 			this.sock.Lock()
 			if this.closed {
+				// TODO this.sock.Unlock() ?
 				pipe.Close()
 				return
 			}
@@ -544,12 +544,12 @@ type listener struct {
 	addr string
 }
 
-func (l *listener) GetOption(n string) (interface{}, error) {
-	return l.l.GetOption(n)
+func (this *listener) GetOption(name string) (interface{}, error) {
+	return this.l.GetOption(name)
 }
 
-func (l *listener) SetOption(n string, v interface{}) error {
-	return l.l.SetOption(n, v)
+func (this *listener) SetOption(name string, val interface{}) error {
+	return this.l.SetOption(name, val)
 }
 
 // serve spins in a loop, calling the accepter's Accept routine.
@@ -571,28 +571,30 @@ func (l *listener) serve() {
 	}
 }
 
-func (l *listener) Listen() error {
+func (this *listener) Listen() error {
 	// This function sets up a goroutine to accept inbound connections.
 	// The accepted connection will be added to a list of accepted
 	// connections.  The Listener just needs to listen continuously,
 	// as we assume that we want to continue to receive inbound
 	// connections without limit.
 
-	if err := l.l.Listen(); err != nil {
+	if err := this.l.Listen(); err != nil {
 		return err
 	}
-	l.sock.listeners = append(l.sock.listeners, l)
-	l.sock.Lock()
-	l.sock.active = true
-	l.sock.Unlock()
-	go l.serve()
+
+	this.sock.listeners = append(this.sock.listeners, this)
+	this.sock.Lock()
+	this.sock.active = true
+	this.sock.Unlock()
+
+	go this.serve()
 	return nil
 }
 
-func (l *listener) Address() string {
-	return l.addr
+func (this *listener) Address() string {
+	return this.addr
 }
 
-func (l *listener) Close() error {
-	return l.l.Close()
+func (this *listener) Close() error {
+	return this.l.Close()
 }

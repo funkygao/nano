@@ -32,8 +32,13 @@ func debugf(format string, args ...interface{}) {
 				file = file[i+1:]
 			}
 		}
-		fmt.Printf("DEBUG: %s:%d [%s]: %s\n", file, line,
-			time.Now().String(), fmt.Sprintf(format, args...))
+		t := time.Now()
+		hour, min, sec := t.Clock()
+		nanosec := t.Nanosecond() / 1e3
+		fmt.Printf("DEBUG: [%d:%d:%d.%04d] %s:%d: %s\n",
+			hour, min, sec, nanosec,
+			file, line,
+			fmt.Sprintf(format, args...))
 	}
 }
 
