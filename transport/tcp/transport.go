@@ -6,15 +6,15 @@ import (
 	"github.com/funkygao/nano"
 )
 
-type tcpTran struct {
+type transport struct {
 	localAddr net.Addr
 }
 
-func (t *tcpTran) Scheme() string {
+func (t *transport) Scheme() string {
 	return "tcp"
 }
 
-func (t *tcpTran) NewDialer(addr string, proto nano.Protocol) (nano.PipeDialer, error) {
+func (t *transport) NewDialer(addr string, proto nano.Protocol) (nano.PipeDialer, error) {
 	var err error
 	d := &dialer{proto: proto, opts: newOptions()}
 
@@ -28,7 +28,7 @@ func (t *tcpTran) NewDialer(addr string, proto nano.Protocol) (nano.PipeDialer, 
 	return d, nil
 }
 
-func (t *tcpTran) NewListener(addr string, proto nano.Protocol) (nano.PipeListener, error) {
+func (t *transport) NewListener(addr string, proto nano.Protocol) (nano.PipeListener, error) {
 	var err error
 	l := &listener{proto: proto, opts: newOptions()}
 
@@ -45,5 +45,5 @@ func (t *tcpTran) NewListener(addr string, proto nano.Protocol) (nano.PipeListen
 
 // NewTransport allocates a new TCP transport.
 func NewTransport() nano.Transport {
-	return &tcpTran{}
+	return &transport{}
 }

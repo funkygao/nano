@@ -13,36 +13,38 @@ type listener struct {
 	opts     options
 }
 
-func (l *listener) Accept() (nano.Pipe, error) {
-
-	if l.listener == nil {
+func (this *listener) Accept() (nano.Pipe, error) {
+	if this.listener == nil {
 		return nil, nano.ErrClosed
 	}
-	conn, err := l.listener.AcceptTCP()
+
+	conn, err := this.listener.AcceptTCP()
 	if err != nil {
 		return nil, err
 	}
-	if err = l.opts.configTCP(conn); err != nil {
+
+	if err = this.opts.configTCP(conn); err != nil {
 		conn.Close()
 		return nil, err
 	}
-	return nano.NewConnPipe(conn, l.proto)
+
+	return nano.NewConnPipe(conn, this.proto)
 }
 
-func (l *listener) Listen() (err error) {
-	l.listener, err = net.ListenTCP("tcp", l.addr)
+func (this *listener) Listen() (err error) {
+	this.listener, err = net.ListenTCP("tcp", this.addr)
 	return
 }
 
-func (l *listener) Close() error {
-	l.listener.Close()
+func (this *listener) Close() error {
+	this.listener.Close()
 	return nil
 }
 
-func (l *listener) SetOption(n string, v interface{}) error {
-	return l.opts.set(n, v)
+func (this *listener) SetOption(name string, val interface{}) error {
+	return this.opts.set(name, val)
 }
 
-func (l *listener) GetOption(n string) (interface{}, error) {
-	return l.opts.get(n)
+func (this *listener) GetOption(name string) (interface{}, error) {
+	return this.opts.get(name)
 }

@@ -12,22 +12,24 @@ type dialer struct {
 	opts  options
 }
 
-func (d *dialer) Dial() (nano.Pipe, error) {
-	conn, err := net.DialTCP("tcp", nil, d.addr)
+func (this *dialer) Dial() (nano.Pipe, error) {
+	conn, err := net.DialTCP("tcp", nil, this.addr)
 	if err != nil {
 		return nil, err
 	}
-	if err = d.opts.configTCP(conn); err != nil {
+
+	if err = this.opts.configTCP(conn); err != nil {
 		conn.Close()
 		return nil, err
 	}
-	return nano.NewConnPipe(conn, d.proto)
+
+	return nano.NewConnPipe(conn, this.proto)
 }
 
-func (d *dialer) SetOption(n string, v interface{}) error {
-	return d.opts.set(n, v)
+func (this *dialer) SetOption(name string, val interface{}) error {
+	return this.opts.set(name, val)
 }
 
-func (d *dialer) GetOption(n string) (interface{}, error) {
-	return d.opts.get(n)
+func (this *dialer) GetOption(name string) (interface{}, error) {
+	return this.opts.get(name)
 }

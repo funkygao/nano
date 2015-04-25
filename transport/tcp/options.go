@@ -6,10 +6,8 @@ import (
 	"github.com/funkygao/nano"
 )
 
-// options is used for shared GetOption/SetOption logic.
 type options map[string]interface{}
 
-// GetOption retrieves an option value.
 func (o options) get(name string) (interface{}, error) {
 	if v, ok := o[name]; !ok {
 		return nil, nano.ErrBadOption
@@ -18,7 +16,6 @@ func (o options) get(name string) (interface{}, error) {
 	}
 }
 
-// SetOption sets an option.
 func (o options) set(name string, val interface{}) error {
 	switch name {
 	case nano.OptionNoDelay:
