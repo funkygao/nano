@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	mangos "github.com/funkygao/nano"
+	"github.com/funkygao/nano"
 	"github.com/funkygao/nano/protocol/rep"
 	"github.com/funkygao/nano/protocol/req"
 )
@@ -113,7 +113,7 @@ func TestTCPSendRecv(t *testing.T) {
 	ping := []byte("REQUEST_MESSAGE")
 	ack := []byte("RESPONSE_MESSAGE")
 
-	ch := make(chan *mangos.Message)
+	ch := make(chan *nano.Message)
 
 	t.Logf("Establishing listener")
 	l, err := tran.NewListener(addr, protoRep)
@@ -142,20 +142,20 @@ func TestTCPSendRecv(t *testing.T) {
 		t.Logf("Connected client: %t", client.IsOpen())
 		defer client.Close()
 
-		req := mangos.NewMessage(len(ping))
+		req := nano.NewMessage(len(ping))
 		req.Body = append(req.Body, ping...)
 
 		// Now try to send data
 		t.Logf("Sending %d bytes", len(req.Body))
 
-		err = client.Send(req)
+		err = client.SendMsg(req)
 		if err != nil {
 			t.Errorf("Client send error: %v", err)
 			return
 		}
 		t.Logf("Client sent")
 
-		rep, err := client.Recv()
+		rep, err := client.RecvMsg()
 		if err != nil {
 			t.Errorf("Client receive error: %v", err)
 			return
@@ -188,7 +188,7 @@ func TestTCPSendRecv(t *testing.T) {
 	defer server.Close()
 
 	// Now we can try to send and receive
-	req, err := server.Recv()
+	req, err := server.RecvMsg()
 	if err != nil {
 		t.Errorf("Server receive error: %v", err)
 		return
@@ -205,12 +205,12 @@ func TestTCPSendRecv(t *testing.T) {
 	}
 
 	// Now reply
-	rep := mangos.NewMessage(len(ack))
+	rep := nano.NewMessage(len(ack))
 	rep.Body = append(rep.Body, ack...)
 
 	t.Logf("Server sending %d bytes", len(rep.Body))
 
-	err = server.Send(rep)
+	err = server.SendMsg(rep)
 	if err != nil {
 		t.Errorf("Server send error: %v", err)
 		return
@@ -242,7 +242,7 @@ func TestTCPOptions(t *testing.T) {
 	t.Logf("Options are %v", interface{}(d).(*dialer).opts)
 
 	// Valid Boolean Options
-	for _, n := range []string{mangos.OptionNoDelay, mangos.OptionKeepAlive} {
+	for _, n := range []string{nano.OptionNoDelay, nano.OptionKeepAlive} {
 		t.Logf("Checking option %s", n)
 
 		if err := d.SetOption(n, true); err != nil {
@@ -266,14 +266,14 @@ func TestTCPOptions(t *testing.T) {
 			}
 		}
 
-		if err := d.SetOption(n, 1234); err != mangos.ErrBadValue {
+		if err := d.SetOption(n, 1234); err != nano.ErrBadValue {
 			t.Errorf("Expected ErrBadValue, but did not get it")
 			return
 		}
 	}
 
 	// Negative test: try a bad option
-	if err := d.SetOption("NO-SUCH-OPTION", 0); err != mangos.ErrBadOption {
+	if err := d.SetOption("NO-SUCH-OPTION", 0); err != nano.ErrBadOption {
 		t.Errorf("Expected ErrBadOption, but did not get it")
 		return
 	}
