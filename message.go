@@ -13,25 +13,24 @@ type Message struct {
 	Header []byte
 	Body   []byte
 
-	hbuf []byte // header buffer
-	bbuf []byte // body buffer
+	headerBuf []byte
+	bodyBuf   []byte
 
-	bsize  int // bucket size
-	refcnt int32
+	bodySize int
+	refCount int32
 }
 
 type msgCacheInfo struct {
-	maxbody int
+	maxBody int
 	cache   chan *Message
 }
 
-// We can tweak these!
-var messageCache = []msgCacheInfo{
-	{maxbody: 64, cache: make(chan *Message, 2048)},   // 128K
-	{maxbody: 128, cache: make(chan *Message, 1024)},  // 128K
-	{maxbody: 1024, cache: make(chan *Message, 1024)}, // 1 MB
-	{maxbody: 8192, cache: make(chan *Message, 256)},  // 2 MB
-	{maxbody: 65536, cache: make(chan *Message, 64)},  // 4 MB
+var messagePool = []msgCacheInfo{
+	{maxBody: 64, cache: make(chan *Message, 2048)},   // 128K
+	{maxBody: 128, cache: make(chan *Message, 1024)},  // 128K
+	{maxBody: 1024, cache: make(chan *Message, 1024)}, // 1 MB
+	{maxBody: 8192, cache: make(chan *Message, 256)},  // 2 MB
+	{maxBody: 65536, cache: make(chan *Message, 64)},  // 4 MB
 }
 
 // Free decrements the reference count on a message, and releases its
@@ -39,20 +38,24 @@ var messageCache = []msgCacheInfo{
 // strictly necessary thanks to GC, doing so allows for the resources to
 // be recycled without engaging GC.  This can have rather substantial
 // benefits for performance.
-func (m *Message) Free() {
-	var ch chan *Message
-	if v := atomic.AddInt32(&m.refcnt, -1); v > 0 {
+func (this *Message) Free() {
+	if refCount := atomic.AddInt32(&this.refCount, -1); refCount > 0 {
 		return
 	}
-	for i := range messageCache {
-		if m.bsize == messageCache[i].maxbody {
-			ch = messageCache[i].cache
+
+	// safe to put back cache pool for later reuse
+	var ch chan *Message
+	for _, info := range messagePool {
+		if this.bodySize == info.maxBody {
+			ch = info.cache
 			break
 		}
 	}
+
 	select {
-	case ch <- m:
+	case ch <- this:
 	default:
+		// cache pool is full, just discard it
 	}
 }
 
@@ -63,9 +66,9 @@ func (m *Message) Free() {
 // add a copy-on-write facility, but for now modification is neither
 // needed nor supported.)  Applications should *NOT* make use of this
 // function -- it is intended for Protocol, Transport and internal use only.
-func (m *Message) Dup() *Message {
-	atomic.AddInt32(&m.refcnt, 1)
-	return m
+func (this *Message) Dup() *Message {
+	atomic.AddInt32(&this.refCount, 1)
+	return this
 }
 
 // NewMessage is the supported way to obtain a new Message.  This makes
@@ -73,24 +76,26 @@ func (m *Message) Dup() *Message {
 func NewMessage(sz int) *Message {
 	var m *Message
 	var ch chan *Message
-	for i := range messageCache {
-		if sz < messageCache[i].maxbody {
-			ch = messageCache[i].cache
-			sz = messageCache[i].maxbody
+	for _, info := range messagePool {
+		if sz < info.maxBody {
+			ch = info.cache
+			sz = info.maxBody // TODO waste memory?
 			break
 		}
 	}
+
 	select {
 	case m = <-ch:
 	default:
+		// message pool empty
 		m = &Message{}
-		m.bbuf = make([]byte, 0, sz)
-		m.hbuf = make([]byte, 0, 32)
-		m.bsize = sz
+		m.bodyBuf = make([]byte, 0, sz)
+		m.headerBuf = make([]byte, 0, 32) // TODO
+		m.bodySize = sz
 	}
 
-	m.refcnt = 1
-	m.Body = m.bbuf
-	m.Header = m.hbuf
+	m.refCount = 1
+	m.Body = m.bodyBuf
+	m.Header = m.headerBuf
 	return m
 }

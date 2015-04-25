@@ -211,7 +211,8 @@ func (sock *socket) SendMsg(msg *Message) error {
 }
 
 func (sock *socket) Send(b []byte) error {
-	msg := &Message{Body: b, Header: nil, refcnt: 1}
+    // TODO borrow from message pool
+	msg := &Message{Body: b, Header: nil, refCount: 1}
 	return sock.SendMsg(msg)
 }
 
