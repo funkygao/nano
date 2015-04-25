@@ -28,8 +28,7 @@ type connipc struct {
 
 // Recv implements the Pipe Recv method.  The message received is expected as
 // a 64-bit size (network byte order) followed by the message itself.
-func (p *conn) Recv() (*Message, error) {
-
+func (p *conn) RecvMsg() (*Message, error) {
 	var sz int64
 	var err error
 	var msg *Message
@@ -63,8 +62,7 @@ func (p *conn) Recv() (*Message, error) {
 
 // Send implements the Pipe Send method.  The message is sent as a 64-bit
 // size (network byte order) followed by the message itself.
-func (p *conn) Send(msg *Message) error {
-
+func (p *conn) SendMsg(msg *Message) error {
 	l := uint64(len(msg.Header) + len(msg.Body))
 
 	// prevent interleaved writes
@@ -158,8 +156,7 @@ func NewConnPipeIPC(c net.Conn, proto Protocol, props ...interface{}) (Pipe, err
 	return p, nil
 }
 
-func (p *connipc) Send(msg *Message) error {
-
+func (p *connipc) SendMsg(msg *Message) error {
 	l := uint64(len(msg.Header) + len(msg.Body))
 	one := [1]byte{1}
 	var err error
@@ -186,8 +183,7 @@ func (p *connipc) Send(msg *Message) error {
 	return nil
 }
 
-func (p *connipc) Recv() (*Message, error) {
-
+func (p *connipc) RecvMsg() (*Message, error) {
 	var sz int64
 	var err error
 	var msg *Message

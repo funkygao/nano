@@ -84,8 +84,7 @@ func (p *pipe) Close() error {
 }
 
 func (p *pipe) SendMsg(msg *Message) error {
-
-	if err := p.pipe.Send(msg); err != nil {
+	if err := p.pipe.SendMsg(msg); err != nil {
 		p.Close()
 		return err
 	}
@@ -93,8 +92,7 @@ func (p *pipe) SendMsg(msg *Message) error {
 }
 
 func (p *pipe) RecvMsg() *Message {
-
-	msg, err := p.pipe.Recv()
+	msg, err := p.pipe.RecvMsg()
 	if err != nil {
 		p.Close()
 		return nil

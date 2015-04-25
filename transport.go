@@ -13,19 +13,19 @@ import (
 // not be directly used in applications.
 type Pipe interface {
 
-	// Send sends a complete message.  In the event of a partial send,
+	// SendMsg sends a complete message.  In the event of a partial send,
 	// the Pipe will be closed, and an error is returned.  For reasons
 	// of efficiency, we allow the message to be sent in a scatter/gather
 	// list.
-	Send(*Message) error
+	SendMsg(*Message) error
 
-	// Recv receives a complete message.  In the event that either a
+	// RecvMsg receives a complete message.  In the event that either a
 	// complete message could not be received, an error is returned
 	// to the caller and the Pipe is closed.
 	//
 	// To mitigate Denial-of-Service attacks, we limit the max message
 	// size to 1M.
-	Recv() (*Message, error)
+	RecvMsg() (*Message, error)
 
 	// Close closes the underlying transport.  Further operations on
 	// the Pipe will result in errors.  Note that messages that are

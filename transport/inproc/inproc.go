@@ -53,8 +53,7 @@ func init() {
 	listeners.cv.L = &listeners.mx
 }
 
-func (p *inproc) Recv() (*mangos.Message, error) {
-
+func (p *inproc) RecvMsg() (*mangos.Message, error) {
 	if p.peer == nil {
 		return nil, mangos.ErrClosed
 	}
@@ -73,8 +72,7 @@ func (p *inproc) Recv() (*mangos.Message, error) {
 	}
 }
 
-func (p *inproc) Send(m *mangos.Message) error {
-
+func (p *inproc) SendMsg(m *mangos.Message) error {
 	if p.peer == nil {
 		return mangos.ErrClosed
 	}
