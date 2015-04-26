@@ -72,13 +72,12 @@ func (pe *repEp) sender() {
 }
 
 func (r *rep) receiver(ep nano.Endpoint) {
+	recvChan := r.sock.RecvChannel()
+	closeChan := r.sock.CloseChannel()
 
-	rq := r.sock.RecvChannel()
-	cq := r.sock.CloseChannel()
-
+	var m *nano.Message
 	for {
-
-		m := ep.RecvMsg()
+		m = ep.RecvMsg()
 		if m == nil {
 			return
 		}
@@ -108,8 +107,8 @@ func (r *rep) receiver(ep nano.Endpoint) {
 		}
 
 		select {
-		case rq <- m:
-		case <-cq:
+		case recvChan <- m:
+		case <-closeChan:
 			m.Free()
 			return
 		}
@@ -118,15 +117,14 @@ func (r *rep) receiver(ep nano.Endpoint) {
 
 func (r *rep) sender() {
 	defer r.w.Done()
-	sq := r.sock.SendChannel()
-	cq := r.sock.CloseChannel()
+	sendChan := r.sock.SendChannel()
+	closeChan := r.sock.CloseChannel()
 
+	var m *nano.Message
 	for {
-		var m *nano.Message
-
 		select {
-		case m = <-sq:
-		case <-cq:
+		case m = <-sendChan:
+		case <-closeChan:
 			return
 		}
 

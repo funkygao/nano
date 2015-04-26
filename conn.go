@@ -44,6 +44,8 @@ func NewConnPipe(c net.Conn, proto Protocol, props ...interface{}) (Pipe, error)
 		this.props[props[i].(string)] = props[i+1]
 	}
 
+	Debugf("proto:%s, props:%v, to handshake...", proto.Name(), this.props)
+
 	if err := this.handshake(); err != nil {
 		return nil, err
 	}
@@ -65,8 +67,7 @@ func (this *connPipe) handshake() error {
 	}
 
 	var err error
-
-	header := connHeader{S: 'S', P: 'P', Proto: this.proto.Number()}
+	var header = connHeader{S: 'S', P: 'P', Proto: this.proto.Number()}
 	if err = binary.Write(this.c, binary.BigEndian, &header); err != nil {
 		return err
 	}
@@ -78,18 +79,19 @@ func (this *connPipe) handshake() error {
 		this.c.Close()
 		return ErrBadHeader
 	}
-	// The only version number we support at present is "0", at offset 3.
+	// The only version number we support at present is "0"
 	if header.Version != 0 {
 		this.c.Close()
 		return ErrBadVersion
 	}
 
-	// The protocol number lives as 16-bits (big-endian) at offset 4.
+	// The protocol number lives as 16-bits (big-endian)
 	if header.Proto != this.proto.PeerNumber() {
 		this.c.Close()
 		return ErrBadProto
 	}
 
+	Debugf("recv header: %v, conn open", header)
 	this.open = true
 	return nil
 }
@@ -109,6 +111,8 @@ func (this *connPipe) RecvMsg() (*Message, error) {
 		this.rlock.Unlock()
 		return nil, err
 	}
+
+	Debugf("sz: %d", sz)
 
 	// TODO: This fixed limit is kind of silly, but it keeps
 	// a bogus peer from causing us to try to allocate ridiculous
@@ -148,6 +152,7 @@ func (this *connPipe) SendMsg(msg *Message) error {
 		this.wlock.Unlock()
 		return err
 	}
+
 	if _, err := this.c.Write(msg.Header); err != nil {
 		this.wlock.Unlock()
 		return err
@@ -156,6 +161,8 @@ func (this *connPipe) SendMsg(msg *Message) error {
 		this.wlock.Unlock()
 		return err
 	}
+
+	Debugf("sz: %d, h:%v, b:%s", sz, msg.Header, string(msg.Body))
 
 	this.wlock.Unlock()
 	msg.Free()

@@ -23,6 +23,8 @@ func (this *dialer) Dial() (nano.Pipe, error) {
 		return nil, err
 	}
 
+	nano.Debugf("dial tcp:%v done, NewConnPipe...", *this.addr)
+
 	return nano.NewConnPipe(conn, this.proto)
 }
 

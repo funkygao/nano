@@ -64,10 +64,14 @@ func MakeSocket(proto Protocol) *socket {
 	// Add some conditionals now -- saves checks later
 	if i, ok := proto.(ProtocolRecvHook); ok {
 		sock.recvhook = i
+		Debugf("got recvhook")
 	}
 	if i, ok := proto.(ProtocolSendHook); ok {
 		sock.sendhook = i
+		Debugf("got recvhook")
 	}
+
+	Debugf("sock:%+v, proto.Init(sock)...", *sock)
 
 	proto.Init(sock)
 
@@ -88,6 +92,8 @@ func (sock *socket) addPipe(tranpipe Pipe, d *dialer, l *listener) *pipe {
 		p.Close()
 		return nil
 	}
+
+	Debugf("t:%#v, d:%#v, l:%#v", tranpipe, d, l)
 
 	sock.Lock()
 	if fn := sock.porthook; fn != nil {
@@ -123,6 +129,10 @@ func (sock *socket) SendChannel() <-chan *Message {
 	return sock.sendChan
 }
 
+// RecvChannel is used for Protocol implementations.  The standard data
+// flow is: Protocol.AddEndpoint will register the Endpoint(low level
+// data stream implementation), Protocol will use this Endpoint to
+// RecvMsg and put the message back to its socket RecvChannel.
 func (sock *socket) RecvChannel() chan<- *Message {
 	return sock.recvChan
 }
@@ -185,6 +195,7 @@ func (sock *socket) SendMsg(msg *Message) error {
 	}
 
 	if sock.sendhook != nil {
+		Debugf("SendHook: %+v", *msg)
 		if ok := sock.sendhook.SendHook(msg); !ok {
 			// just drop it silently TODO ErrSendHook?
 			msg.Free()
@@ -192,7 +203,7 @@ func (sock *socket) SendMsg(msg *Message) error {
 		}
 	}
 
-	sock.Lock()
+	sock.Lock() // TODO need lock?
 	timeout := mkTimer(sock.wdeadline)
 	sock.Unlock()
 	select {
@@ -201,6 +212,7 @@ func (sock *socket) SendMsg(msg *Message) error {
 	case <-sock.closeChan:
 		return ErrClosed
 	case sock.sendChan <- msg:
+		Debugf("put to send chan: %+v", *msg)
 		return nil
 	}
 }
@@ -221,12 +233,14 @@ func (sock *socket) RecvMsg() (*Message, error) {
 		return nil, e
 	}
 
+	var msg *Message
 	for {
 		select {
 		case <-timeout:
 			return nil, ErrRecvTimeout
-		case msg := <-sock.recvChan:
+		case msg = <-sock.recvChan:
 			if sock.recvhook != nil {
+				Debugf("RecvHook: %+v", *msg)
 				if ok := sock.recvhook.RecvHook(msg); ok {
 					return msg, nil
 				} // else loop
@@ -267,14 +281,17 @@ func (sock *socket) getTransport(addr string) Transport {
 func (sock *socket) AddTransport(t Transport) {
 	sock.Lock()
 	sock.transports[t.Scheme()] = t
+	Debugf("transports: %v", sock.transports)
 	sock.Unlock()
 }
 
-func (sock *socket) DialOptions(addr string, opts map[string]interface{}) error {
-	d, err := sock.NewDialer(addr, opts)
+func (sock *socket) DialOptions(addr string, options map[string]interface{}) error {
+	d, err := sock.NewDialer(addr, options)
 	if err != nil {
 		return err
 	}
+
+	Debugf("addr:%s, opt:%v, dialing...", addr, options)
 
 	return d.Dial()
 }
@@ -299,6 +316,7 @@ func (sock *socket) NewDialer(addr string, options map[string]interface{}) (Dial
 			return nil, err
 		}
 	}
+
 	return d, nil
 }
 
@@ -307,6 +325,9 @@ func (sock *socket) ListenOptions(addr string, options map[string]interface{}) e
 	if err != nil {
 		return err
 	}
+
+	Debugf("addr:%s, opt:%v, listen...", addr, options)
+
 	if err = l.Listen(); err != nil {
 		return err
 	}
@@ -450,7 +471,7 @@ type dialer struct {
 	sock      *socket
 	addr      string
 	closed    bool
-	active    bool
+	active    bool // TDOO dup with socket.active?
 	closeChan chan struct{}
 }
 
@@ -529,7 +550,7 @@ func (this *dialer) dialer() {
 			return
 		case <-time.After(rtime):
 			rtime *= 2
-			debugf("%s", rtime)
+			Debugf("%s", rtime)
 			if rtime > rtmax {
 				rtime = rtmax
 			}
@@ -554,6 +575,8 @@ func (this *listener) SetOption(name string, val interface{}) error {
 
 // serve spins in a loop, calling the accepter's Accept routine.
 func (l *listener) serve() {
+	Debugf("serve: %+v", *l)
+
 	for {
 		select {
 		case <-l.sock.closeChan:
@@ -567,7 +590,7 @@ func (l *listener) serve() {
 			l.sock.addPipe(pipe, nil, l)
 		} else if err == ErrClosed {
 			return
-		}
+		} // TODO else
 	}
 }
 
@@ -586,6 +609,7 @@ func (this *listener) Listen() error {
 	this.sock.Lock()
 	this.sock.active = true
 	this.sock.Unlock()
+	Debugf("sock is active")
 
 	go this.serve()
 	return nil

@@ -11,7 +11,7 @@ var (
 	Debug = true
 )
 
-func debugf(format string, args ...interface{}) {
+func Debugf(format string, args ...interface{}) {
 	if Debug {
 		pc, file, line, ok := runtime.Caller(1)
 		if !ok {

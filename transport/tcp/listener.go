@@ -28,6 +28,8 @@ func (this *listener) Accept() (nano.Pipe, error) {
 		return nil, err
 	}
 
+	nano.Debugf("accept tcp:%v done, NewConnPipe...", *this.addr)
+
 	return nano.NewConnPipe(conn, this.proto)
 }
 

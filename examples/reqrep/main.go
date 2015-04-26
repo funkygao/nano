@@ -7,6 +7,7 @@ import (
 	"github.com/funkygao/nano/transport/tcp"
 	"log"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -49,11 +50,14 @@ func request() {
 	dieIfErr(err)
 	dieIfErr(socket.SetOption(nano.OptionSendDeadline, time.Second))
 
-	for {
-		err = socket.Send([]byte("hello"))
+	for i := 0; i < 2; i++ {
+		err = socket.Send([]byte(strings.Repeat("X", 100)))
 		dieIfErr(err)
+
+		time.Sleep(time.Second)
 	}
 
+	socket.Close()
 }
 
 func reply() {
