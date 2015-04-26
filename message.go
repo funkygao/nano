@@ -97,7 +97,6 @@ func NewMessage(sz int) *Message {
 		msg.slabSize = sz
 		msg.bodyBuf = make([]byte, 0, msg.slabSize)
 		msg.headerBuf = make([]byte, 0, 32) // TODO
-
 	}
 
 	msg.refCount = 1

@@ -40,7 +40,7 @@ func (r *req) Init(socket nano.ProtocolSocket) {
 	r.waker.Stop()
 	r.sock.SetRecvError(nano.ErrProtoState)
 
-	nano.Debugf("got initial nextid:%d, state:%v, this:%+v",
+	nano.Debugf("got initial nextid:%d, recv state:%v, this:%+v",
 		r.nextid, nano.ErrProtoState, *r)
 }
 
@@ -206,7 +206,7 @@ func (r *req) SendHook(m *nano.Message) bool {
 
 	r.sock.SetRecvError(nil)
 
-	nano.Debugf("state normal, msg header:%v, reqid:%v", m.Header, v)
+	nano.Debugf("send state normal, msg header:%v, reqid:%v", m.Header, v)
 
 	return true
 }
@@ -232,7 +232,7 @@ func (r *req) RecvHook(m *nano.Message) bool {
 	r.reqmsg = nil
 	r.sock.SetRecvError(nano.ErrProtoState)
 
-	nano.Debugf("state:%v, msg header:%v, reqmsg:%v",
+	nano.Debugf("recv state:%v, msg header:%v, reqmsg:%v",
 		nano.ErrProtoState, m.Header, *r.reqmsg)
 	return true
 }
@@ -247,6 +247,7 @@ func (r *req) SetOption(option string, value interface{}) error {
 		if r.raw {
 			r.sock.SetRecvError(nil)
 		} else {
+			nano.Debugf("set recv state: %v", nano.ErrProtoState)
 			r.sock.SetRecvError(nano.ErrProtoState)
 		}
 		return nil
@@ -284,6 +285,5 @@ func NewProtocol() nano.Protocol {
 
 // NewSocket allocates a new Socket using the REQ protocol.
 func NewSocket() (nano.Socket, error) {
-	nano.Debugf("")
 	return nano.MakeSocket(&req{}), nil
 }

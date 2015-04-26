@@ -6,6 +6,7 @@ import (
 	"github.com/funkygao/nano"
 )
 
+// dialer implements the nano.PipeDialer interface.
 type dialer struct {
 	addr  *net.TCPAddr
 	proto nano.Protocol

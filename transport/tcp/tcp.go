@@ -38,7 +38,7 @@ func (this *tcpTransport) NewListener(addr string, proto nano.Protocol) (nano.Pi
 		return nil, err
 	}
 
-	nano.Debugf("listener:%v", *l)
+	nano.Debugf("listener:%#v", *l)
 	return l, nil
 }
 

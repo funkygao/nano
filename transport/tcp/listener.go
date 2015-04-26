@@ -6,6 +6,7 @@ import (
 	"github.com/funkygao/nano"
 )
 
+// listener implements the nano.PipeListener interface.
 type listener struct {
 	addr     *net.TCPAddr
 	proto    nano.Protocol
@@ -34,6 +35,7 @@ func (this *listener) Accept() (nano.Pipe, error) {
 }
 
 func (this *listener) Listen() (err error) {
+	nano.Debugf("%s", this.addr)
 	this.listener, err = net.ListenTCP("tcp", this.addr)
 	return
 }

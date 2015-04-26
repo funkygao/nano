@@ -50,7 +50,7 @@ func request() {
 	dieIfErr(err)
 	dieIfErr(socket.SetOption(nano.OptionSendDeadline, time.Second))
 
-	for i := 0; i < 2; i++ {
+	for i := 0; i < 1; i++ {
 		err = socket.Send([]byte(strings.Repeat("X", 100)))
 		dieIfErr(err)
 

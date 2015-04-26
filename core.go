@@ -8,7 +8,8 @@ import (
 
 // socket is the meaty part of the core information.
 type socket struct {
-	proto Protocol
+	proto      Protocol
+	transports map[string]Transport // key is transport scheme
 
 	sync.Mutex
 
@@ -23,17 +24,15 @@ type socket struct {
 	recverr error // error to return on attempts to Recv()
 	senderr error // error to return on attempts to Send()
 
-	rdeadline  time.Duration
-	wdeadline  time.Duration
-	reconnTime time.Duration // reconnect time after error or disconnect
-	reconnMax  time.Duration // max reconnect interval before give up? TODO SetOption
-	linger     time.Duration
+	rdeadline  time.Duration // read deadline
+	wdeadline  time.Duration // write deadline
+	redialTime time.Duration // reconnect time after error or disconnect
+	redialMax  time.Duration // max reconnect interval before give up? TODO SetOption
+	linger     time.Duration // wait up to that time for sockets to drain
 
-	pipes []*pipe
+	pipes []*pipeEndpoint
 
 	listeners []*listener
-
-	transports map[string]Transport // key is transport scheme
 
 	// These are conditional "type aliases" for our self
 	sendhook ProtocolSendHook
@@ -52,12 +51,12 @@ func MakeSocket(proto Protocol) *socket {
 		sendChan:     make(chan *Message, defaultQLen),
 		recvChan:     make(chan *Message, defaultQLen),
 		closeChan:    make(chan struct{}),
-		reconnTime:   time.Millisecond * 100, // TODO
-		reconnMax:    time.Minute,
+		redialTime:   time.Millisecond * 100, // TODO
+		redialMax:    time.Minute,
 		linger:       time.Second, // TODO
 		proto:        proto,
 		transports:   make(map[string]Transport), // TODO key is string?
-		pipes:        make([]*pipe, 0),
+		pipes:        make([]*pipeEndpoint, 0),
 		listeners:    make([]*listener, 0),
 	}
 
@@ -68,7 +67,7 @@ func MakeSocket(proto Protocol) *socket {
 	}
 	if i, ok := proto.(ProtocolSendHook); ok {
 		sock.sendhook = i
-		Debugf("got recvhook")
+		Debugf("got sendhook")
 	}
 
 	Debugf("sock:%+v, proto.Init(sock)...", *sock)
@@ -78,7 +77,7 @@ func MakeSocket(proto Protocol) *socket {
 	return sock
 }
 
-func (sock *socket) addPipe(tranpipe Pipe, d *dialer, l *listener) *pipe {
+func (sock *socket) addPipe(tranpipe Pipe, d *dialer, l *listener) *pipeEndpoint {
 	p := newPipe(tranpipe)
 	p.dialer = d
 	p.listener = l
@@ -112,8 +111,10 @@ func (sock *socket) addPipe(tranpipe Pipe, d *dialer, l *listener) *pipe {
 	return p
 }
 
-func (sock *socket) removePipe(p *pipe) {
+func (sock *socket) removePipe(p *pipeEndpoint) {
 	sock.proto.RemoveEndpoint(p)
+
+	Debugf("%#v", *p)
 
 	sock.Lock()
 	if p.index >= 0 {
@@ -169,7 +170,7 @@ func (sock *socket) Close() error {
 	for _, l := range sock.listeners {
 		l.l.Close()
 	}
-	pipes := append([]*pipe{}, sock.pipes...)
+	pipes := append([]*pipeEndpoint{}, sock.pipes...)
 	sock.Unlock()
 
 	// A second drain, just to be sure.  (We could have had device or
@@ -348,6 +349,7 @@ func (sock *socket) NewListener(addr string, options map[string]interface{}) (Li
 	if t == nil {
 		return nil, ErrBadTran
 	}
+
 	var err error
 	l := &listener{sock: sock, addr: addr}
 	l.l, err = t.NewListener(addr, sock.proto)
@@ -360,6 +362,7 @@ func (sock *socket) NewListener(addr string, options map[string]interface{}) (Li
 			return nil, err
 		}
 	}
+
 	return l, nil
 }
 
@@ -466,6 +469,7 @@ func (sock *socket) SetPortHook(newhook PortHook) PortHook {
 	return oldhook
 }
 
+// dialer implements the Dailer interface.
 type dialer struct {
 	d         PipeDialer
 	sock      *socket
@@ -486,6 +490,8 @@ func (this *dialer) Dial() error {
 	this.sock.active = true
 	this.active = true
 	this.sock.Unlock()
+
+	Debugf("sock is active, go dialer...")
 
 	go this.dialer()
 	return nil
@@ -518,13 +524,13 @@ func (this *dialer) Address() string {
 
 // dialer is used to dial or redial from a goroutine.
 func (this *dialer) dialer() {
-	rtime := this.sock.reconnTime
-	rtmax := this.sock.reconnMax
+	rtime := this.sock.redialTime
+	rtmax := this.sock.redialMax
 	for {
 		pipe, err := this.d.Dial()
 		if err == nil {
 			// reset retry time
-			rtime = this.sock.reconnTime
+			rtime = this.sock.redialTime
 			this.sock.Lock()
 			if this.closed {
 				// TODO this.sock.Unlock() ?
@@ -559,6 +565,7 @@ func (this *dialer) dialer() {
 	}
 }
 
+// listener implements the Listener interface.
 type listener struct {
 	l    PipeListener
 	sock *socket
