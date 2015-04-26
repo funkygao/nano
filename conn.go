@@ -37,10 +37,13 @@ func NewConnPipe(c net.Conn, proto Protocol, props ...interface{}) (Pipe, error)
 	this.props[PropLocalAddr] = c.LocalAddr()
 	this.props[PropRemoteAddr] = c.RemoteAddr()
 
-	// TODO seems buggy
-	for i := 0; i+1 < len(props); i++ {
+	if len(props)%2 != 0 {
+		return nil, ErrBadOption
+	}
+	for i := 0; i+1 < len(props); i += 2 {
 		this.props[props[i].(string)] = props[i+1]
 	}
+
 	if err := this.handshake(); err != nil {
 		return nil, err
 	}
