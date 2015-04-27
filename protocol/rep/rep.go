@@ -1,5 +1,7 @@
 // Package rep implements the REP protocol, which is the response side of
 // the request/response pattern.  (REQ is the request.)
+// The REQ-REP socket pair is in lockstep. Doing any other
+// sequence (e.g., sending two messages in a row) will result in error.
 package rep
 
 import (
