@@ -46,10 +46,10 @@ type socket struct {
 // is that they can wrap this to provide a "proto.NewSocket()" implementation.
 func MakeSocket(proto Protocol) *socket {
 	sock := &socket{
-		sendChanSize: defaultQLen,
-		recvChanSize: defaultQLen,
-		sendChan:     make(chan *Message, defaultQLen),
-		recvChan:     make(chan *Message, defaultQLen),
+		sendChanSize: defaultChanLen,
+		recvChanSize: defaultChanLen,
+		sendChan:     make(chan *Message, defaultChanLen),
+		recvChan:     make(chan *Message, defaultChanLen),
 		closeChan:    make(chan struct{}),
 		redialTime:   time.Millisecond * 100, // TODO
 		redialMax:    time.Minute,

@@ -1,6 +1,7 @@
 package nano
 
 import (
+	"bufio"
 	"encoding/binary"
 	"io"
 	"net"
@@ -11,12 +12,14 @@ import (
 // assumption is that transports using this have similar wire protocols,
 // and conn is meant to be used as a building block.
 type connPipe struct {
-	c     net.Conn
-	rlock sync.Mutex
-	wlock sync.Mutex
-	proto Protocol
-	open  bool
-	props map[string]interface{}
+	c      net.Conn
+	rlock  sync.Mutex
+	wlock  sync.Mutex
+	reader *bufio.Reader
+	writer *bufio.Writer
+	proto  Protocol
+	open   bool
+	props  map[string]interface{}
 }
 
 // NewConnPipe allocates a new Pipe using the supplied net.Conn, and
@@ -30,9 +33,11 @@ type connPipe struct {
 // SP messages once the lower layer connection is established.
 func NewConnPipe(c net.Conn, proto Protocol, props ...interface{}) (Pipe, error) {
 	this := &connPipe{
-		c:     c,
-		proto: proto,
-		props: make(map[string]interface{}),
+		c:      c,
+		reader: bufio.NewReaderSize(c, defaultBufferSize),
+		writer: bufio.NewWriterSize(c, defaultBufferSize),
+		proto:  proto,
+		props:  make(map[string]interface{}),
 	}
 	this.props[PropLocalAddr] = c.LocalAddr()
 	this.props[PropRemoteAddr] = c.RemoteAddr()

@@ -1,7 +1,12 @@
 package nano
 
-// defaultQLen is the default length of the upper read/write queues.
-const defaultQLen = 128
+const (
+	// defaultChanLen is the default length of the read/write memory channel.
+	defaultChanLen = 128
+
+	// defaultBufferSize is the default bufio buffer size.
+	defaultBufferSize = 16 * 1024
+)
 
 // The following are Properties which are exposed on a Port.
 
