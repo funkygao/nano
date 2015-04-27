@@ -61,12 +61,12 @@ func MakeSocket(proto Protocol) *socket {
 	}
 
 	// Add some conditionals now -- saves checks later
-	if i, ok := proto.(ProtocolRecvHook); ok {
-		sock.recvhook = i
+	if hook, ok := proto.(ProtocolRecvHook); ok {
+		sock.recvhook = hook
 		Debugf("got recvhook")
 	}
-	if i, ok := proto.(ProtocolSendHook); ok {
-		sock.sendhook = i
+	if hook, ok := proto.(ProtocolSendHook); ok {
+		sock.sendhook = hook
 		Debugf("got sendhook")
 	}
 
@@ -339,6 +339,7 @@ func (sock *socket) Listen(addr string) error {
 	return sock.ListenOptions(addr, nil)
 }
 
+// NewListener wraps  PipeListener created in Transport.
 func (sock *socket) NewListener(addr string, options map[string]interface{}) (Listener, error) {
 	// This function sets up a goroutine to accept inbound connections.
 	// The accepted connection will be added to a list of accepted

@@ -18,7 +18,7 @@ type connPipe struct {
 	reader *bufio.Reader
 	writer *bufio.Writer
 	proto  Protocol
-	open   bool
+	open   bool // true after handshake
 	props  map[string]interface{}
 }
 
