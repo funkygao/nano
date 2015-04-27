@@ -10,7 +10,7 @@ import (
 
 // connPipe implements the Pipe interface on top of net.Conn.  The
 // assumption is that transports using this have similar wire protocols,
-// and conn is meant to be used as a building block.
+// and connPipe is meant to be used as a building block.
 type connPipe struct {
 	c      net.Conn
 	rlock  sync.Mutex
@@ -27,10 +27,6 @@ type connPipe struct {
 // only returning the Pipe once the SP layer negotiation is complete.
 //
 // Stream oriented transports can utilize this to implement a Transport.
-// The implementation will also need to implement PipeDialer, PipeAccepter,
-// and the Transport enclosing structure.   Using this layered interface,
-// the implementation needn't bother concerning itself with passing actual
-// SP messages once the lower layer connection is established.
 func NewConnPipe(c net.Conn, proto Protocol, props ...interface{}) (Pipe, error) {
 	this := &connPipe{
 		c:      c,
@@ -39,9 +35,9 @@ func NewConnPipe(c net.Conn, proto Protocol, props ...interface{}) (Pipe, error)
 		proto:  proto,
 		props:  make(map[string]interface{}),
 	}
+
 	this.props[PropLocalAddr] = c.LocalAddr()
 	this.props[PropRemoteAddr] = c.RemoteAddr()
-
 	if len(props)%2 != 0 {
 		return nil, ErrBadOption
 	}
@@ -49,7 +45,7 @@ func NewConnPipe(c net.Conn, proto Protocol, props ...interface{}) (Pipe, error)
 		this.props[props[i].(string)] = props[i+1]
 	}
 
-	Debugf("proto:%s, props:%v, to handshake...", proto.Name(), this.props)
+	Debugf("proto:%s, props:%v", proto.Name(), this.props)
 
 	if err := this.handshake(); err != nil {
 		return nil, err
@@ -211,14 +207,18 @@ type connPipeIpc struct {
 
 // NewConnPipeIPC allocates a new Pipe using the IPC exchange protocol.
 func NewConnPipeIPC(c net.Conn, proto Protocol, props ...interface{}) (Pipe, error) {
-	this := &connPipeIpc{connPipe: connPipe{c: c, proto: proto}}
+	this := &connPipeIpc{connPipe: connPipe{
+		c:     c,
+		proto: proto,
+		props: make(map[string]interface{}),
+	}}
 
-	this.props = make(map[string]interface{})
 	this.props[PropLocalAddr] = c.LocalAddr()
 	this.props[PropRemoteAddr] = c.RemoteAddr()
-
-	// TODO seems buggy
-	for i := 0; i+1 < len(props); i++ {
+	if len(props)%2 != 0 {
+		return nil, ErrBadOption
+	}
+	for i := 0; i+1 < len(props); i += 2 {
 		this.props[props[i].(string)] = props[i+1]
 	}
 

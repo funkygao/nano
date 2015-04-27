@@ -7,7 +7,7 @@ import (
 )
 
 type tcpTransport struct {
-	localAddr net.Addr
+	localAddr net.Addr // TODO deprecated, not in use
 }
 
 func (this *tcpTransport) Scheme() string {
