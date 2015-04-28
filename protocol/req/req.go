@@ -234,8 +234,8 @@ func (r *req) RecvHook(m *nano.Message) bool {
 	r.reqmsg = nil
 	r.sock.SetRecvError(nano.ErrProtoState)
 
-	nano.Debugf("recv state:%v, msg header:%v, reqmsg:%v",
-		nano.ErrProtoState, m.Header, *r.reqmsg)
+	//nano.Debugf("recv state:%v, msg header:%v, reqmsg:%v",
+	//nano.ErrProtoState, m.Header, *r.reqmsg)
 	return true
 }
 

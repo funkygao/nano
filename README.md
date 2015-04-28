@@ -1,6 +1,22 @@
 nano
 ====
 
+MOM based
+
+It frames messages.
+
+Actually, behind the scenes, it does a lot. It frames messages. It sends and receives them in an asynchronous non-blocking manner. It checks for connection failures and re-establishes connections as needed. It queues the messages if the peer is unavailable at the moment. It ensures that individual peers are assigned their fair share of server resources so that a single client can't hijack the server. It routes the replies to the original requester.
+
+intermediary nodes
+
+通讯模式，它改变了通讯都基于一对一的连接这个假设。1:1 => N:M
+
+通信模型
+
+ip is hop-to-hop, udp/tcp is end-to-end
+
+实现路由功能的组件叫作 Device
+
 
 Pluggable Transports and Protocols
 

@@ -55,6 +55,10 @@ func request() {
 		dieIfErr(err)
 
 		time.Sleep(time.Second)
+
+		msg, err := socket.Recv()
+		dieIfErr(err)
+		log.Println(string(msg))
 	}
 
 	socket.Close()
@@ -72,6 +76,8 @@ func reply() {
 		dieIfErr(err)
 
 		log.Println(string(data))
+
+		socket.Send([]byte("world"))
 	}
 
 }

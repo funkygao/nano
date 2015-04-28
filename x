@@ -19,3 +19,6 @@ socket implements ProtocolSocket and Socket both.
 
 PipeDialer, PipeListener => handshake
 Pipe                     => stream IO
+
+
+protocol.NewSocket -> nano.MakeSocket(proto)

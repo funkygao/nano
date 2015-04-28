@@ -1,11 +1,19 @@
 package nano
 
+import (
+	"time"
+)
+
 const (
 	// defaultChanLen is the default length of the read/write memory channel.
 	defaultChanLen = 128
 
 	// defaultBufferSize is the default bufio buffer size.
 	defaultBufferSize = 16 * 1024
+
+	defaultRedialTime = time.Millisecond * 100
+	defaultRedialMax  = time.Minute
+	defaultLingerTime = time.Second
 )
 
 // The following are Properties which are exposed on a Port.

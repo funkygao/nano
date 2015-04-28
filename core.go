@@ -32,13 +32,11 @@ type socket struct {
 
 	pipes []*pipeEndpoint
 
-	listeners []*listener
+	listeners []*listener // TODO discard this, pipes already got it
 
-	// These are conditional "type aliases" for our self
 	sendhook ProtocolSendHook
 	recvhook ProtocolRecvHook
 
-	// Port hook -- called when a port is added or removed
 	porthook PortHook
 }
 
@@ -46,18 +44,18 @@ type socket struct {
 // is that they can wrap this to provide a "proto.NewSocket()" implementation.
 func MakeSocket(proto Protocol) *socket {
 	sock := &socket{
+		proto:        proto,
 		sendChanSize: defaultChanLen,
 		recvChanSize: defaultChanLen,
 		sendChan:     make(chan *Message, defaultChanLen),
 		recvChan:     make(chan *Message, defaultChanLen),
 		closeChan:    make(chan struct{}),
-		redialTime:   time.Millisecond * 100, // TODO
-		redialMax:    time.Minute,
-		linger:       time.Second, // TODO
-		proto:        proto,
-		transports:   make(map[string]Transport), // TODO key is string?
-		pipes:        make([]*pipeEndpoint, 0),
-		listeners:    make([]*listener, 0),
+		redialTime:   defaultRedialTime,
+		redialMax:    defaultRedialMax,
+		linger:       defaultLingerTime,
+		transports:   make(map[string]Transport, 1),
+		pipes:        make([]*pipeEndpoint, 0, 2),
+		listeners:    make([]*listener, 0), // TODO why no dialers?
 	}
 
 	// Add some conditionals now -- saves checks later
