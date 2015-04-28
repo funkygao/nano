@@ -3,6 +3,7 @@ package nano
 import (
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -19,7 +20,7 @@ type socket struct {
 	recvChanSize int
 	closeChan    chan struct{} // closed when user requests close
 
-	closing bool  // true if Socket was closed at API level
+	closing int32 // 1 if Socket was closed at API level
 	active  bool  // true if either Dial or Listen has been successfully called
 	recverr error // error to return on attempts to Recv()
 	senderr error // error to return on attempts to Send()
@@ -123,23 +124,19 @@ func (sock *socket) SetRecvError(err error) {
 }
 
 func (sock *socket) Close() error {
-	expire := time.Now().Add(sock.linger)
-	DrainChannel(sock.sendChan, expire)
-
-	sock.Lock()
-	if sock.closing {
-		sock.Unlock()
+	if !atomic.CompareAndSwapInt32(&sock.closing, 0, 1) {
 		return ErrClosed
 	}
 
-	sock.closing = true
-	close(sock.closeChan)
+	expire := time.Now().Add(sock.linger)
+	DrainChannel(sock.sendChan, expire)
+
+	sock.active = false
 
 	for _, l := range sock.listeners {
 		l.l.Close()
 	}
 	pipes := append([]*pipeEndpoint{}, sock.pipes...)
-	sock.Unlock()
 
 	// A second drain, just to be sure.  (We could have had device or
 	// forwarded messages arrive since the last one.)

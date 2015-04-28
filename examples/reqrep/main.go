@@ -61,7 +61,7 @@ func request() {
 		log.Println(string(msg))
 	}
 
-	socket.Close()
+	dieIfErr(socket.Close())
 }
 
 func reply() {
