@@ -118,12 +118,9 @@ const (
 	// Dial or Listen has been called on the socket.
 	OptionReadQLen = "READQ-LEN"
 
-	// OptionKeepAlive is used to set TCP KeepAlive.  Value is a boolean.
-	// Default is true.
-	OptionKeepAlive = "KEEPALIVE"
-
 	// OptionNoDelay is used to configure Nagle -- when true messages are
 	// sent as soon as possible, otherwise some buffering may occur.
+	// nagle's only applies to client rather than server.
 	// Value is a boolean.  Default is true.
 	OptionNoDelay = "NO-DELAY"
 

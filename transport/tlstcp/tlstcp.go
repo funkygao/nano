@@ -43,11 +43,6 @@ func (o options) configTCP(conn *net.TCPConn) error {
 			return err
 		}
 	}
-	if v, ok := o[nano.OptionKeepAlive]; ok {
-		if err := conn.SetKeepAlive(v.(bool)); err != nil {
-			return err
-		}
-	}
 
 	return nil
 }

@@ -22,18 +22,9 @@ func TestOptionsInvalidName(t *testing.T) {
 
 func TestOptionsValidName(t *testing.T) {
 	opt := newOptions()
-	defaultKeepAlive, err := opt.get(nano.OptionKeepAlive)
-	assert.Equal(t, nil, err)
-	assert.Equal(t, true, defaultKeepAlive.(bool))
 	defaultNoDelay, err := opt.get(nano.OptionNoDelay)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, true, defaultNoDelay)
-
-	err = opt.set(nano.OptionKeepAlive, false)
-	assert.Equal(t, nil, err)
-	keepAlive, err := opt.get(nano.OptionKeepAlive)
-	assert.Equal(t, nil, err)
-	assert.Equal(t, false, keepAlive)
 
 	err = opt.set(nano.OptionNoDelay, false)
 	assert.Equal(t, nil, err)

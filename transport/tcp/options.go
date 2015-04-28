@@ -11,7 +11,6 @@ type options map[string]interface{}
 func newOptions() options {
 	opt := make(options)
 	opt[nano.OptionNoDelay] = true
-	opt[nano.OptionKeepAlive] = true
 	return opt
 }
 
@@ -26,8 +25,6 @@ func (o options) get(name string) (interface{}, error) {
 func (o options) set(name string, val interface{}) error {
 	switch name {
 	case nano.OptionNoDelay:
-		fallthrough
-	case nano.OptionKeepAlive:
 		switch v := val.(type) {
 		case bool:
 			o[name] = v
@@ -45,10 +42,6 @@ func (o options) configTCP(conn *net.TCPConn) error {
 			return err
 		}
 	}
-	if v, ok := o[nano.OptionKeepAlive]; ok {
-		if err := conn.SetKeepAlive(v.(bool)); err != nil {
-			return err
-		}
-	}
+
 	return nil
 }
