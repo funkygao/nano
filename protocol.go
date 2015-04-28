@@ -8,6 +8,7 @@ import (
 // to the underlying stream transport.  It can be thought of as one side
 // of a TCP, IPC, or other type of connection.
 type Endpoint interface {
+
 	// Id returns a unique 31-bit value associated with the Endpoint.
 	// The value is unique for a given socket, at a given time.
 	Id() uint32
@@ -79,7 +80,7 @@ type ProtocolRecvHook interface {
 	// RecvHook is called just before the message is handed to the
 	// application.  The message may be modified.  If false is returned,
 	// then the message is dropped.
-	RecvHook(*Message) bool
+	RecvHook(*Message) bool // TODO return error instead of bool
 }
 
 // ProtocolSendHook is intended to be an additional extension
@@ -89,7 +90,7 @@ type ProtocolSendHook interface {
 	// If false is returned, the message will be silently dropped.
 	// Note that the message may be dropped for other reasons,
 	// such as if backpressure is applied.
-	SendHook(*Message) bool
+	SendHook(*Message) bool // TODO return error instead of bool
 }
 
 // ProtocolSocket is the "handle" given to protocols to interface with the
@@ -97,6 +98,7 @@ type ProtocolSendHook interface {
 // except by using functions made available on the ProtocolSocket.  Note
 // that all functions listed here are non-blocking.
 type ProtocolSocket interface {
+
 	// SendChannel represents the channel used to send messages.  The
 	// application injects messages to it, and the protocol consumes
 	// messages from it.  When the socket is done sending, it will send

@@ -55,6 +55,7 @@ type Pipe interface {
 // PipeDialer is only intended for use by transport implementors, and should
 // not be directly used in applications.
 type PipeDialer interface {
+
 	// Dial is used to initiate a connection to a remote peer.
 	Dial() (Pipe, error)
 
@@ -104,6 +105,7 @@ type PipeListener interface {
 
 // Transport is the interface for transport suppliers to implement.
 type Transport interface {
+
 	// Scheme returns a string used as the prefix for SP "addresses".
 	// This is similar to a URI scheme.  For example, schemes can be
 	// "tcp" (for "tcp://xxx..."), "ipc", "inproc", etc.

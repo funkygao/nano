@@ -75,52 +75,26 @@ func MakeSocket(proto Protocol) *socket {
 	return sock
 }
 
-func (sock *socket) addPipe(tranpipe Pipe, d *dialer, l *listener) *pipeEndpoint {
-	p := newPipe(tranpipe)
-	p.dialer = d
-	p.listener = l
-
-	// dialer or listener must be provied only one
-	if l == nil && d == nil {
-		p.Close()
-		return nil
-	}
-	if l != nil && d != nil {
-		p.Close()
-		return nil
-	}
-
-	Debugf("t:%#v, d:%#v, l:%#v", tranpipe, d, l)
-
+func (sock *socket) getTransport(addr string) Transport {
 	sock.Lock()
-	if fn := sock.porthook; fn != nil {
-		sock.Unlock()
-		if !fn(PortActionAdd, p) {
-			p.Close()
-			return nil
-		}
-		sock.Lock()
+	defer sock.Unlock()
+
+	var i int
+	if i = strings.Index(addr, "://"); i < 0 {
+		return nil
 	}
-	p.sock = sock
-	p.index = len(sock.pipes)
-	sock.pipes = append(sock.pipes, p)
-	sock.Unlock()
-	sock.proto.AddEndpoint(p)
-	return p
+	scheme := addr[:i]
+	t, ok := sock.transports[scheme]
+	if t != nil && ok {
+		return t
+	}
+	return nil
 }
 
-func (sock *socket) removePipe(p *pipeEndpoint) {
-	sock.proto.RemoveEndpoint(p)
-
-	Debugf("%#v", *p)
-
+func (sock *socket) AddTransport(t Transport) {
 	sock.Lock()
-	if p.index >= 0 {
-		sock.pipes[p.index] = sock.pipes[len(sock.pipes)-1]
-		sock.pipes[p.index].index = p.index
-		sock.pipes = sock.pipes[:len(sock.pipes)-1]
-		p.index = -1
-	}
+	sock.transports[t.Scheme()] = t
+	Debugf("transports: %v", sock.transports)
 	sock.Unlock()
 }
 
@@ -128,10 +102,6 @@ func (sock *socket) SendChannel() <-chan *Message {
 	return sock.sendChan
 }
 
-// RecvChannel is used for Protocol implementations.  The standard data
-// flow is: Protocol.AddEndpoint will register the Endpoint(low level
-// data stream implementation), Protocol will use this Endpoint to
-// RecvMsg and put the message back to its socket RecvChannel.
 func (sock *socket) RecvChannel() chan<- *Message {
 	return sock.recvChan
 }
@@ -141,27 +111,27 @@ func (sock *socket) CloseChannel() <-chan struct{} {
 }
 
 func (sock *socket) SetSendError(err error) {
-	sock.Lock()
+	sock.Lock() // TODO this lock is required?
 	sock.senderr = err
 	sock.Unlock()
 }
 
 func (sock *socket) SetRecvError(err error) {
-	sock.Lock()
+	sock.Lock() // TODO
 	sock.recverr = err
 	sock.Unlock()
 }
 
 func (sock *socket) Close() error {
-	fin := time.Now().Add(sock.linger)
-
-	DrainChannel(sock.sendChan, fin)
+	expire := time.Now().Add(sock.linger)
+	DrainChannel(sock.sendChan, expire)
 
 	sock.Lock()
 	if sock.closing {
 		sock.Unlock()
 		return ErrClosed
 	}
+
 	sock.closing = true
 	close(sock.closeChan)
 
@@ -173,10 +143,10 @@ func (sock *socket) Close() error {
 
 	// A second drain, just to be sure.  (We could have had device or
 	// forwarded messages arrive since the last one.)
-	DrainChannel(sock.sendChan, fin)
+	DrainChannel(sock.sendChan, expire)
 
 	// And tell the protocol to shutdown and drain its pipes too.
-	sock.proto.Shutdown(fin)
+	sock.proto.Shutdown(expire)
 
 	for _, p := range pipes {
 		p.Close()
@@ -187,10 +157,10 @@ func (sock *socket) Close() error {
 
 func (sock *socket) SendMsg(msg *Message) error {
 	sock.Lock()
-	e := sock.senderr // copy err
+	err := sock.senderr // copy err
 	sock.Unlock()
-	if e != nil {
-		return e
+	if err != nil {
+		return err
 	}
 
 	if sock.sendhook != nil {
@@ -202,11 +172,8 @@ func (sock *socket) SendMsg(msg *Message) error {
 		}
 	}
 
-	sock.Lock() // TODO need lock?
-	timeout := mkTimer(sock.wdeadline)
-	sock.Unlock()
 	select {
-	case <-timeout:
+	case <-mkTimer(sock.wdeadline):
 		return ErrSendTimeout
 	case <-sock.closeChan:
 		return ErrClosed
@@ -214,12 +181,6 @@ func (sock *socket) SendMsg(msg *Message) error {
 		Debugf("put to send chan: %+v", *msg)
 		return nil
 	}
-}
-
-func (sock *socket) Send(b []byte) error {
-	// TODO borrow from message pool
-	msg := &Message{Body: b, Header: nil, refCount: 1}
-	return sock.SendMsg(msg)
 }
 
 func (sock *socket) RecvMsg() (*Message, error) {
@@ -253,35 +214,18 @@ func (sock *socket) RecvMsg() (*Message, error) {
 	}
 }
 
+func (sock *socket) Send(b []byte) error {
+	// TODO borrow from message pool
+	msg := &Message{Body: b, Header: nil, refCount: 1}
+	return sock.SendMsg(msg)
+}
+
 func (sock *socket) Recv() ([]byte, error) {
 	msg, err := sock.RecvMsg()
 	if err != nil {
 		return nil, err
 	}
 	return msg.Body, nil
-}
-
-func (sock *socket) getTransport(addr string) Transport {
-	sock.Lock()
-	defer sock.Unlock()
-
-	var i int
-	if i = strings.Index(addr, "://"); i < 0 {
-		return nil
-	}
-	scheme := addr[:i]
-	t, ok := sock.transports[scheme]
-	if t != nil && ok {
-		return t
-	}
-	return nil
-}
-
-func (sock *socket) AddTransport(t Transport) {
-	sock.Lock()
-	sock.transports[t.Scheme()] = t
-	Debugf("transports: %v", sock.transports)
-	sock.Unlock()
 }
 
 func (sock *socket) DialOptions(addr string, options map[string]interface{}) error {
@@ -466,6 +410,55 @@ func (sock *socket) SetPortHook(newhook PortHook) PortHook {
 	sock.porthook = newhook
 	sock.Unlock()
 	return oldhook
+}
+
+func (sock *socket) addPipe(tranpipe Pipe, d *dialer, l *listener) *pipeEndpoint {
+	p := newPipe(tranpipe)
+	p.dialer = d
+	p.listener = l
+
+	// dialer or listener must be provied only one
+	if l == nil && d == nil {
+		p.Close()
+		return nil
+	}
+	if l != nil && d != nil {
+		p.Close()
+		return nil
+	}
+
+	Debugf("t:%#v, d:%#v, l:%#v", tranpipe, d, l)
+
+	sock.Lock()
+	if fn := sock.porthook; fn != nil {
+		sock.Unlock()
+		if !fn(PortActionAdd, p) {
+			p.Close()
+			return nil
+		}
+		sock.Lock()
+	}
+	p.sock = sock
+	p.index = len(sock.pipes)
+	sock.pipes = append(sock.pipes, p)
+	sock.Unlock()
+	sock.proto.AddEndpoint(p)
+	return p
+}
+
+func (sock *socket) removePipe(p *pipeEndpoint) {
+	sock.proto.RemoveEndpoint(p)
+
+	Debugf("%#v", *p)
+
+	sock.Lock()
+	if p.index >= 0 {
+		sock.pipes[p.index] = sock.pipes[len(sock.pipes)-1]
+		sock.pipes[p.index].index = p.index
+		sock.pipes = sock.pipes[:len(sock.pipes)-1]
+		p.index = -1
+	}
+	sock.Unlock()
 }
 
 // dialer implements the Dailer interface.

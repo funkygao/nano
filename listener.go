@@ -3,6 +3,7 @@ package nano
 // Listener is an interface to the underlying listener for a transport
 // and address.
 type Listener interface {
+
 	// Close closes the listener, and removes it from any active socket.
 	// Further operations on the Listener will return ErrClosed.
 	Close() error

@@ -30,8 +30,10 @@ func DrainChannel(ch chan<- *Message, expire time.Time) bool {
 
 	for {
 		if len(ch) == 0 {
+			// all drained
 			return true
 		}
+
 		now := time.Now()
 		if now.After(expire) {
 			return false
@@ -43,7 +45,10 @@ func DrainChannel(ch chan<- *Message, expire time.Time) bool {
 		dur = expire.Sub(now)
 		if dur > time.Millisecond*10 {
 			dur = time.Millisecond * 10
+		} else if dur < time.Millisecond {
+			dur = time.Millisecond
 		}
+
 		time.Sleep(dur)
 	}
 }

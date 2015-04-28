@@ -21,4 +21,8 @@ PipeDialer, PipeListener => handshake
 Pipe                     => stream IO
 
 
-protocol.NewSocket -> nano.MakeSocket(proto)
+protocol.NewSocket -> nano.MakeSocket(proto) -> protocol.Init
+
+
+
+sock.SendMsg -> sock.sendChan -> protocol.senderGoRoutine -> protocol.ep.SendMsg
