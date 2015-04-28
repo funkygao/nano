@@ -46,8 +46,11 @@ func request() {
 	dieIfErr(err)
 
 	socket.AddTransport(tcp.NewTransport())
-	err = socket.Dial(addr)
-	dieIfErr(err)
+	go func() {
+		time.Sleep(5 * time.Second)
+		err = socket.Dial(addr)
+		dieIfErr(err)
+	}()
 	dieIfErr(socket.SetOption(nano.OptionSendDeadline, time.Second))
 
 	for i := 0; i < 1; i++ {
@@ -62,6 +65,8 @@ func request() {
 	}
 
 	dieIfErr(socket.Close())
+
+	time.Sleep(time.Minute)
 }
 
 func reply() {

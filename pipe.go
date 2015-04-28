@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+// TODO duplicated with socket.pipes
 var pipes struct {
 	byid   map[uint32]*pipeEndpoint
 	nextid uint32
@@ -15,15 +16,15 @@ var pipes struct {
 // pipe wraps the Pipe data structure with the stuff we need to keep
 // for the core.  It implements the Endpoint interface.
 type pipeEndpoint struct {
-	pipe      Pipe
-	closeChan chan struct{} // only closed, never passes data
-	id        uint32
-	index     int // index in master list of pipes for socket
-
+	pipe     Pipe // connPipe
 	listener *listener
 	dialer   *dialer
 	sock     *socket
-	closing  bool // true if we were closed
+
+	closing   bool          // true if we were closed
+	closeChan chan struct{} // only closed, never passes data
+	id        uint32
+	index     int // index in master list of pipes for socket
 
 	sync.Mutex
 }
@@ -33,9 +34,14 @@ func init() {
 	pipes.nextid = uint32(rand.NewSource(time.Now().UnixNano()).Int63())
 }
 
-func newPipe(tranpipe Pipe) *pipeEndpoint {
-	this := &pipeEndpoint{pipe: tranpipe, index: -1}
-	this.closeChan = make(chan struct{})
+func newPipe(connPipe Pipe, d *dialer, l *listener) *pipeEndpoint {
+	this := &pipeEndpoint{
+		pipe:      connPipe,
+		dialer:    d,
+		listener:  l,
+		index:     -1,
+		closeChan: make(chan struct{}),
+	}
 	for {
 		pipes.Lock()
 		this.id = pipes.nextid & 0x7fffffff
@@ -55,8 +61,9 @@ func newPipe(tranpipe Pipe) *pipeEndpoint {
 
 func (this *pipeEndpoint) Id() uint32 {
 	pipes.Lock()
-	defer pipes.Unlock()
-	return this.id
+	id := this.id
+	pipes.Unlock()
+	return id
 }
 
 func (this *pipeEndpoint) Close() error {
@@ -67,19 +74,23 @@ func (this *pipeEndpoint) Close() error {
 		hook = sock.porthook
 	}
 	if this.closing {
+		this.Unlock()
 		return nil
 	}
 	this.closing = true
 	this.Unlock()
+
 	close(this.closeChan)
 	if sock != nil {
 		sock.removePipe(this)
 	}
 	this.pipe.Close()
+
 	pipes.Lock()
 	delete(pipes.byid, this.id)
 	this.id = 0 // safety
 	pipes.Unlock()
+
 	if hook != nil {
 		hook(PortActionRemove, this)
 	}

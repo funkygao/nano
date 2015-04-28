@@ -139,7 +139,7 @@ func (r *req) sender(ep nano.Endpoint) {
 			return
 		}
 
-		nano.Debugf("sending: %+v", *m)
+		nano.Debugf("sending: %+v ep:%T", *m, ep)
 		if ep.SendMsg(m) != nil {
 			r.resendMsgChan <- m
 			break

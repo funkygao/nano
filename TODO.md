@@ -7,3 +7,5 @@ TODO
 - [ ] bufio
 - [ ] sync.Pool
 - [ ] big size msg
+- [ ] demo Device usage
+- [ ] msg copy between transports
