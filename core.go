@@ -41,6 +41,7 @@ type socket struct {
 // MakeSocket is intended for use by Protocol implementations.  The intention
 // is that they can wrap this to provide a "proto.NewSocket()" implementation.
 func MakeSocket(proto Protocol) Socket {
+	Debugf("proto: %v", proto.Name())
 	sock := &socket{
 		proto:        proto,
 		sendChanSize: defaultChanLen,
@@ -58,11 +59,9 @@ func MakeSocket(proto Protocol) Socket {
 	// Add some conditionals now -- saves checks later
 	if hook, ok := proto.(ProtocolRecvHook); ok {
 		sock.recvhook = hook
-		Debugf("got recvhook")
 	}
 	if hook, ok := proto.(ProtocolSendHook); ok {
 		sock.sendhook = hook
-		Debugf("got sendhook")
 	}
 
 	Debugf("sock:%+v, proto.Init(sock)...", *sock)
@@ -141,6 +140,7 @@ func (sock *socket) Close() error {
 	// And tell the protocol to shutdown and drain its pipes too.
 	sock.proto.Shutdown(expire)
 
+	Debugf("closing all pipes: %#v", pipes)
 	for _, p := range pipes {
 		p.Close()
 	}
@@ -156,6 +156,8 @@ func (sock *socket) SendMsg(msg *Message) error {
 		return err
 	}
 
+	Debugf("msg: %+v", *msg)
+
 	if sock.sendhook != nil {
 		Debugf("SendHook: %+v", *msg)
 		if ok := sock.sendhook.SendHook(msg); !ok {
@@ -167,8 +169,10 @@ func (sock *socket) SendMsg(msg *Message) error {
 
 	select {
 	case <-mkTimer(sock.writeDeadline):
+		Debugf("write timeout")
 		return ErrSendTimeout
 	case <-sock.closeChan:
+		Debugf("socket closed")
 		return ErrClosed
 	case sock.sendChan <- msg:
 		Debugf("put to send chan: %+v", *msg)
@@ -191,6 +195,8 @@ func (sock *socket) RecvMsg() (*Message, error) {
 		case <-timeout:
 			return nil, ErrRecvTimeout
 		case msg = <-sock.recvChan:
+			Debugf("recv msg: %+v", *msg)
+
 			if sock.recvhook != nil {
 				Debugf("RecvHook: %+v", *msg)
 				if ok := sock.recvhook.RecvHook(msg); ok {
@@ -201,6 +207,7 @@ func (sock *socket) RecvMsg() (*Message, error) {
 				return msg, nil
 			}
 		case <-sock.closeChan:
+			Debugf("socket closed")
 			return nil, ErrClosed
 		}
 	}
@@ -400,27 +407,27 @@ func (sock *socket) SetPortHook(newhook PortHook) PortHook {
 }
 
 func (sock *socket) addPipe(connPipe Pipe, d *dialer, l *listener) *pipeEndpoint {
-	p := newPipe(connPipe, d, l)
-	Debugf("t:%#v, d:%#v, l:%#v", connPipe, d, l)
+	pe := newPipeEndpoint(connPipe, d, l)
+	Debugf("d:%+v, l:%+v", d, l)
 
 	sock.Lock()
 	if fn := sock.porthook; fn != nil {
 		sock.Unlock()
-		if !fn(PortActionAdd, p) {
-			p.Close()
+		if !fn(PortActionAdd, pe) {
+			pe.Close()
 			return nil
 		}
 		sock.Lock()
 	}
-	p.sock = sock
-	p.index = len(sock.pipes)
-	sock.pipes = append(sock.pipes, p)
+	pe.sock = sock
+	pe.index = len(sock.pipes)
+	sock.pipes = append(sock.pipes, pe)
 	sock.Unlock()
 
 	// let Protocol register this endpoint
-	sock.proto.AddEndpoint(p)
+	sock.proto.AddEndpoint(pe)
 
-	return p
+	return pe
 }
 
 func (sock *socket) removePipe(p *pipeEndpoint) {
@@ -552,33 +559,6 @@ func (this *listener) SetOption(name string, val interface{}) error {
 	return this.l.SetOption(name, val)
 }
 
-// serve spins in a loop, calling the accepter's Accept routine.
-func (l *listener) serve() {
-	Debugf("serve: %+v", *l)
-
-	for {
-		select {
-		case <-l.sock.closeChan:
-			return
-		default:
-		}
-
-		connPipe, err := l.l.Accept()
-		if err == nil {
-			l.sock.addPipe(connPipe, nil, l)
-		} else {
-			// If the underlying PipeListener is closed, or not
-			// listening, we expect to return back with an error.
-			if err == ErrClosed {
-				return
-			} else {
-				// TODO
-			}
-		}
-
-	}
-}
-
 func (this *listener) Listen() error {
 	this.sock.Lock()
 	if this.sock.active {
@@ -607,4 +587,33 @@ func (this *listener) Address() string {
 
 func (this *listener) Close() error {
 	return this.l.Close()
+}
+
+// serve spins in a loop, calling the accepter's Accept routine.
+func (l *listener) serve() {
+	Debugf("serve: %+v", *l)
+
+	for {
+		select {
+		case <-l.sock.closeChan:
+			return
+		default:
+		}
+
+		Debugf("waiting for %T Accept", l.l)
+		connPipe, err := l.l.Accept()
+		if err == nil {
+			Debugf("successfully accepting new conn, addPipe...")
+			l.sock.addPipe(connPipe, nil, l)
+		} else {
+			// If the underlying PipeListener is closed, or not
+			// listening, we expect to return back with an error.
+			if err == ErrClosed {
+				return
+			} else {
+				// TODO
+			}
+		}
+
+	}
 }

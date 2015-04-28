@@ -72,6 +72,8 @@ func (this *connPipe) handshake() error {
 	if err = binary.Write(this.c, binary.BigEndian, &header); err != nil {
 		return err
 	}
+	Debugf("send header: %v", header)
+
 	if err = binary.Read(this.c, binary.BigEndian, &header); err != nil {
 		this.c.Close()
 		return err
@@ -92,7 +94,7 @@ func (this *connPipe) handshake() error {
 		return ErrBadProto
 	}
 
-	Debugf("recv header: %v, conn open", header)
+	Debugf("recv header: %v", header)
 	this.open = true
 	return nil
 }

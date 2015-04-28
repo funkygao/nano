@@ -34,7 +34,7 @@ func init() {
 	pipes.nextid = uint32(rand.NewSource(time.Now().UnixNano()).Int63())
 }
 
-func newPipe(connPipe Pipe, d *dialer, l *listener) *pipeEndpoint {
+func newPipeEndpoint(connPipe Pipe, d *dialer, l *listener) *pipeEndpoint {
 	this := &pipeEndpoint{
 		pipe:      connPipe,
 		dialer:    d,
@@ -44,9 +44,9 @@ func newPipe(connPipe Pipe, d *dialer, l *listener) *pipeEndpoint {
 	}
 	for {
 		pipes.Lock()
-		this.id = pipes.nextid & 0x7fffffff
+		this.id = pipes.nextid & 0x7fffffff // TODO
 		pipes.nextid++
-		Debugf("%d %d", this.id, pipes.nextid)
+		Debugf("pipe.id=%d nextid=%d", this.id, pipes.nextid)
 		if this.id != 0 && pipes.byid[this.id] == nil {
 			pipes.byid[this.id] = this
 			pipes.Unlock()
@@ -100,21 +100,27 @@ func (this *pipeEndpoint) Close() error {
 }
 
 func (this *pipeEndpoint) SendMsg(msg *Message) error {
-	Debugf("msg: %+v", *msg)
+	Debugf("msg: %+v, calling %T.SendMsg", *msg, this.pipe)
 	if err := this.pipe.SendMsg(msg); err != nil {
+		// FIXME error will lead to close?
 		this.Close()
 		return err
 	}
+
 	return nil
 }
 
 func (this *pipeEndpoint) RecvMsg() *Message {
-	Debugf("RecvMsg: %#v", this.pipe)
+	Debugf("calling %T.RecvMsg", this.pipe)
 	msg, err := this.pipe.RecvMsg()
 	if err != nil {
+		// FIXME error will lead to close?
+		Debugf("recv msg err: %v, close myself", err)
 		this.Close()
 		return nil
 	}
+
+	Debugf("RecvMsg: %+v", *msg)
 	return msg
 }
 

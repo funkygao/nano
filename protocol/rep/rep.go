@@ -54,7 +54,8 @@ func (r *rep) Init(sock nano.ProtocolSocket) {
 	r.backtracebuf = make([]byte, 64)
 	r.ttl = 8 // default specified in the RFC
 	r.waiter.Init()
-	nano.Debugf("set send state: %v", nano.ErrProtoState)
+	nano.Debugf("set send state: %v, only after recv data will it set send state normal",
+		nano.ErrProtoState)
 	r.sock.SetSendError(nano.ErrProtoState)
 }
 
@@ -79,10 +80,13 @@ func (r *rep) receiver(ep nano.Endpoint) {
 
 	var m *nano.Message
 	for {
+		nano.Debugf("calling %T.RecvMsg", ep)
 		m = ep.RecvMsg()
 		if m == nil {
 			return
 		}
+
+		nano.Debugf("recv a msg: %#v", *m)
 
 		v := ep.Id()
 		m.Header = append(m.Header,
@@ -209,8 +213,7 @@ func (r *rep) RecvHook(m *nano.Message) bool {
 		return true
 	}
 
-	nano.Debugf("recv state normal, msg: %+v", *m)
-
+	nano.Debugf("send state normal, msg: %+v", *m)
 	r.sock.SetSendError(nil)
 	r.backtraceL.Lock()
 	r.backtrace = append(r.backtracebuf[0:0], m.Header...)
@@ -226,9 +229,12 @@ func (r *rep) SendHook(m *nano.Message) bool {
 	if r.raw {
 		return true
 	}
+
 	r.sock.SetSendError(nano.ErrProtoState)
 	r.backtraceL.Lock()
+	nano.Debugf("before hook msg: %#v", *m)
 	m.Header = append(m.Header[0:0], r.backtrace...)
+	nano.Debugf("after hook msg: %#v", *m)
 	r.backtrace = nil
 	r.backtraceL.Unlock()
 	if m.Header == nil {

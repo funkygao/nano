@@ -19,17 +19,17 @@ func (this *listener) Accept() (nano.Pipe, error) {
 		return nil, nano.ErrClosed
 	}
 
+	nano.Debugf("accepting...")
 	conn, err := this.listener.AcceptTCP()
 	if err != nil {
 		return nil, err
 	}
 
+	nano.Debugf("accepted tcp:%#s", conn.RemoteAddr().String())
 	if err = this.opts.configTCP(conn); err != nil {
 		conn.Close()
 		return nil, err
 	}
-
-	nano.Debugf("accepted tcp:%#s", conn.RemoteAddr().String())
 
 	return nano.NewConnPipe(conn, this.proto)
 }

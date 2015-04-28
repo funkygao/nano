@@ -10,6 +10,7 @@ PipeDialer -> transport creates it
 transport -> NewConnPipe
 
 
+how to call GetProp?
 
 
 
