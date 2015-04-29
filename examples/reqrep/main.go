@@ -12,8 +12,13 @@ import (
 )
 
 const (
-    addr = "tcp://127.0.0.1:1234"
+	addr = "tcp://127.0.0.1:1234"
+	//addr = "ipc://xx"
 )
+
+func init() {
+	nano.Debug = false
+}
 
 func dieIfErr(err error) {
 	if err != nil {
@@ -42,47 +47,41 @@ func main() {
 }
 
 func request() {
-	socket, err := req.NewSocket()
+	sock, err := req.NewSocket()
 	dieIfErr(err)
 
-	transport.AddAll(socket)
-	go func() {
-		time.Sleep(5 * time.Second)
-		err = socket.Dial(addr)
-		dieIfErr(err)
-	}()
-	dieIfErr(socket.SetOption(nano.OptionSendDeadline, time.Second))
+	transport.AddAll(sock)
+	err = sock.Dial(addr)
+	dieIfErr(err)
+	dieIfErr(sock.SetOption(nano.OptionSendDeadline, time.Second))
 
-	for i := 0; i < 1; i++ {
-		err = socket.Send([]byte(strings.Repeat("X", 10)))
+	for i := 0; i < 10<<20; i++ {
+		err = sock.Send([]byte(strings.Repeat("X", 10)))
 		dieIfErr(err)
 
-		time.Sleep(time.Second)
-
-		msg, err := socket.Recv()
+		msg, err := sock.Recv()
 		dieIfErr(err)
-		log.Println(string(msg))
+		log.Println(i, string(msg))
 	}
 
-	dieIfErr(socket.Close())
+	dieIfErr(sock.Close())
 
-	time.Sleep(time.Minute)
 }
 
 func reply() {
-	socket, err := rep.NewSocket()
+	sock, err := rep.NewSocket()
 	dieIfErr(err)
 
-	transport.AddAll(socket)
-	dieIfErr(socket.Listen(addr))
+	transport.AddAll(sock)
+	dieIfErr(sock.Listen(addr))
 
 	for {
-		data, err := socket.Recv()
+		data, err := sock.Recv()
 		dieIfErr(err)
 
 		log.Println(string(data))
 
-		socket.Send([]byte("world"))
+		sock.Send([]byte("world"))
 	}
 
 }
