@@ -214,11 +214,10 @@ func (sock *socket) RecvMsg() (*Message, error) {
 }
 
 func (sock *socket) Send(b []byte) error {
-	msg := NewMessage(len(b))
-	msg.Body = b
-	err := sock.SendMsg(msg)
-	msg.Free()
-	return err
+	// msg is allocated on stack instead of heap
+	// so needn't NewMessage
+	msg := &Message{Body: b, Header: nil, refCount: 1}
+	return sock.SendMsg(msg)
 }
 
 func (sock *socket) Recv() ([]byte, error) {
