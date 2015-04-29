@@ -11,12 +11,8 @@ import (
 	"time"
 )
 
-var (
-	addr string
-)
-
 func init() {
-	nano.Debug = false
+	nano.Debug = true
 }
 
 func dieIfErr(err error) {
@@ -25,29 +21,31 @@ func dieIfErr(err error) {
 	}
 }
 
-func request() {
+func request(addr string) {
 	sock, err := req.NewSocket()
 	dieIfErr(err)
 
 	transport.AddAll(sock)
-	err = sock.Dial(addr)
-	dieIfErr(err)
+	dieIfErr(sock.SetOption(nano.OptionReadQLen, 4<<10)) // must be before Dial
+	dieIfErr(sock.SetOption(nano.OptionWriteQLen, 4<<10))
+	dieIfErr(sock.Dial(addr))
 	dieIfErr(sock.SetOption(nano.OptionSendDeadline, time.Second))
 
-	for i := 0; i < 10<<20; i++ {
+	for i := 0; i < 2; i++ {
 		err = sock.Send([]byte(strings.Repeat("X", 10)))
 		dieIfErr(err)
 
 		msg, err := sock.Recv()
 		dieIfErr(err)
 		log.Println(i, string(msg))
+
+		time.Sleep(time.Second)
 	}
 
 	dieIfErr(sock.Close())
-
 }
 
-func reply() {
+func reply(addr string) {
 	sock, err := rep.NewSocket()
 	dieIfErr(err)
 
@@ -61,7 +59,7 @@ func reply() {
 
 		log.Println(string(data))
 
-		sock.Send([]byte("world"))
+		dieIfErr(sock.Send([]byte("world")))
 	}
 
 }
@@ -77,13 +75,11 @@ func main() {
 		usage()
 	}
 
-	addr = os.Args[2]
-
 	switch os.Args[1] {
 	case "rep":
-		reply()
+		reply(os.Args[2])
 	case "req":
-		request()
+		request(os.Args[2])
 	default:
 		usage()
 	}
