@@ -1,4 +1,4 @@
-// Package pair implements the PAIR protocol.  This protocol is a 1:1
+// Package pair implements the PAIR protocol.  This protocol is a two-way 1:1
 // peering protocol.
 package pair
 
