@@ -11,9 +11,8 @@ import (
 	"time"
 )
 
-const (
-	addr = "tcp://127.0.0.1:1234"
-	//addr = "ipc://xx"
+var (
+	addr string
 )
 
 func init() {
@@ -23,26 +22,6 @@ func init() {
 func dieIfErr(err error) {
 	if err != nil {
 		panic(err)
-	}
-}
-
-func usage() {
-	log.Printf("Usage: %s <rep | req>", os.Args[0])
-	os.Exit(0)
-}
-
-func main() {
-	if len(os.Args) != 2 {
-		usage()
-	}
-
-	switch os.Args[1] {
-	case "rep":
-		reply()
-	case "req":
-		request()
-	default:
-		usage()
 	}
 }
 
@@ -74,6 +53,7 @@ func reply() {
 
 	transport.AddAll(sock)
 	dieIfErr(sock.Listen(addr))
+	log.Printf("listening on %s", addr)
 
 	for {
 		data, err := sock.Recv()
@@ -84,4 +64,27 @@ func reply() {
 		sock.Send([]byte("world"))
 	}
 
+}
+
+func usage() {
+	log.Printf("Usage: %s <rep|req> <url>", os.Args[0])
+	log.Println("url example: tcp://127.0.0.1:1234  ipc://x.sock  inproc://test  tlstcp://127.0.0.1:1234")
+	os.Exit(0)
+}
+
+func main() {
+	if len(os.Args) != 3 {
+		usage()
+	}
+
+	addr = os.Args[2]
+
+	switch os.Args[1] {
+	case "rep":
+		reply()
+	case "req":
+		request()
+	default:
+		usage()
+	}
 }
