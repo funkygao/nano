@@ -109,8 +109,7 @@ func (this *connPipe) RecvMsg() (*Message, error) {
 	// prevent interleaved reads
 	this.rlock.Lock()
 
-	// TODO bufio will read sz and body at once if msg is not too big
-	if err = binary.Read(this.c, binary.BigEndian, &sz); err != nil {
+	if err = binary.Read(this.reader, binary.BigEndian, &sz); err != nil {
 		this.rlock.Unlock()
 		return nil, err
 	}
@@ -131,11 +130,13 @@ func (this *connPipe) RecvMsg() (*Message, error) {
 
 	msg = NewMessage(int(sz))
 	msg.Body = msg.Body[0:sz] // the msg may be pulled from message pool, so reset body
-	if _, err = io.ReadFull(this.c, msg.Body); err != nil {
+	if _, err = io.ReadFull(this.reader, msg.Body); err != nil {
 		msg.Free()
 		this.rlock.Unlock()
 		return nil, err
 	}
+
+	Debugf("msgbody: %s", string(msg.Body))
 
 	this.rlock.Unlock()
 	return msg, nil
@@ -150,18 +151,25 @@ func (this *connPipe) SendMsg(msg *Message) error {
 	// prevent interleaved writes
 	this.wlock.Lock()
 
-	// send length header TODO bufio
-	if err := binary.Write(this.c, binary.BigEndian, sz); err != nil {
+	if err := binary.Write(this.writer, binary.BigEndian, sz); err != nil {
 		this.wlock.Unlock()
+		msg.Free()
 		return err
 	}
 
-	if _, err := this.c.Write(msg.Header); err != nil {
+	if _, err := this.writer.Write(msg.Header); err != nil {
 		this.wlock.Unlock()
+		msg.Free()
 		return err
 	}
-	if _, err := this.c.Write(msg.Body); err != nil {
+	if _, err := this.writer.Write(msg.Body); err != nil {
 		this.wlock.Unlock()
+		msg.Free()
+		return err
+	}
+	if err := this.writer.Flush(); err != nil {
+		this.wlock.Unlock()
+		msg.Free()
 		return err
 	}
 
@@ -210,9 +218,11 @@ type connPipeIpc struct {
 // NewConnPipeIPC allocates a new Pipe using the IPC exchange protocol.
 func NewConnPipeIPC(c net.Conn, proto Protocol, props ...interface{}) (Pipe, error) {
 	this := &connPipeIpc{connPipe: connPipe{
-		c:     c,
-		proto: proto,
-		props: make(map[string]interface{}),
+		c:      c,
+		reader: bufio.NewReaderSize(c, defaultBufferSize),
+		writer: bufio.NewWriterSize(c, defaultBufferSize),
+		proto:  proto,
+		props:  make(map[string]interface{}),
 	}}
 
 	this.props[PropLocalAddr] = c.LocalAddr()
@@ -240,20 +250,29 @@ func (this *connPipeIpc) SendMsg(msg *Message) error {
 	this.wlock.Lock()
 
 	// send length header
-	if _, err = this.c.Write(one[:]); err != nil {
+	if _, err = this.writer.Write(one[:]); err != nil {
 		this.wlock.Unlock()
+		msg.Free()
 		return err
 	}
-	if err = binary.Write(this.c, binary.BigEndian, sz); err != nil {
+	if err = binary.Write(this.writer, binary.BigEndian, sz); err != nil {
 		this.wlock.Unlock()
+		msg.Free()
 		return err
 	}
-	if _, err = this.c.Write(msg.Header); err != nil {
+	if _, err = this.writer.Write(msg.Header); err != nil {
 		this.wlock.Unlock()
+		msg.Free()
 		return err
 	}
-	if _, err = this.c.Write(msg.Body); err != nil {
+	if _, err = this.writer.Write(msg.Body); err != nil {
 		this.wlock.Unlock()
+		msg.Free()
+		return err
+	}
+	if err := this.writer.Flush(); err != nil {
+		this.wlock.Unlock()
+		msg.Free()
 		return err
 	}
 
@@ -271,11 +290,11 @@ func (this *connPipeIpc) RecvMsg() (*Message, error) {
 	// prevent interleaved reads
 	this.rlock.Lock()
 
-	if _, err = this.c.Read(one[:]); err != nil {
+	if _, err = this.reader.Read(one[:]); err != nil {
 		this.rlock.Unlock()
 		return nil, err
 	}
-	if err = binary.Read(this.c, binary.BigEndian, &sz); err != nil {
+	if err = binary.Read(this.reader, binary.BigEndian, &sz); err != nil {
 		this.rlock.Unlock()
 		return nil, err
 	}
@@ -289,7 +308,7 @@ func (this *connPipeIpc) RecvMsg() (*Message, error) {
 
 	msg = NewMessage(int(sz))
 	msg.Body = msg.Body[0:sz]
-	if _, err = io.ReadFull(this.c, msg.Body); err != nil {
+	if _, err = io.ReadFull(this.reader, msg.Body); err != nil {
 		this.rlock.Unlock()
 		msg.Free()
 		return nil, err

@@ -114,6 +114,9 @@ func (this *pipeEndpoint) RecvMsg() *Message {
 	Debugf("calling %T.RecvMsg", this.pipe)
 	msg, err := this.pipe.RecvMsg()
 	if err != nil {
+		// e,g connection reset by peer: read a socket that was closed by peer, RST
+		// e,g broken pipe: write to socket that was closed by peer
+		// e,g read tcp i/o timeout
 		// FIXME error will lead to close?
 		Debugf("recv msg err: %v, close myself", err)
 		this.Close()
