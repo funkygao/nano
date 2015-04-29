@@ -112,6 +112,8 @@ func (r *rep) receiver(ep nano.Endpoint) {
 			}
 		}
 
+		nano.Debugf("now msg: %#v", *m)
+
 		select {
 		case recvChan <- m:
 		case <-closeChan:
