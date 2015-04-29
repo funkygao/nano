@@ -225,7 +225,7 @@ func (sock *socket) Recv() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return msg.Body, nil
+	return msg.Body, nil // FIXME when to msg.Free?
 }
 
 func (sock *socket) DialOptions(addr string, options map[string]interface{}) error {
