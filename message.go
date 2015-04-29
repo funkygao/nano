@@ -1,6 +1,7 @@
 package nano
 
 import (
+	"io"
 	"sync/atomic"
 )
 
@@ -74,6 +75,12 @@ func (this *Message) Dup() *Message {
 // TODO
 func (this *Message) Clone() *Message {
 	return nil
+}
+
+// WriteTo writes complete message body to a writer or
+// when an error occurs.
+func (this *Message) WriteTo(w io.Writer) (int, error) {
+	return w.Write(this.Body)
 }
 
 // NewMessage is the supported way to obtain a new Message.  This makes
