@@ -26,3 +26,23 @@ func BenchmarkCAS(b *testing.B) {
 		atomic.CompareAndSwapInt32(&v, 0, 1)
 	}
 }
+
+func BenchmarkNewMessageSize1K(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		m := NewMessage(1 << 10)
+		m.Free()
+	}
+}
+
+func BenchmarkNewMessageSize50(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		m := NewMessage(50)
+		m.Free()
+	}
+}
+
+func BenchmarkNewMessageSize1KNoFree(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		NewMessage(1 << 10)
+	}
+}
