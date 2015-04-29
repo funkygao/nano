@@ -17,6 +17,7 @@ import (
 )
 
 var (
+	//addr             = "ipc://xx"
 	addr             = "tcp://127.0.0.1:1234"
 	bodySize         = 1000
 	dashboardRefresh = 10
