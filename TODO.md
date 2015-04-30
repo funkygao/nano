@@ -9,3 +9,4 @@ TODO
 - [ ] big size msg
 - [ ] demo Device usage
 - [ ] msg copy between transports
+- [ ] inproc tranport req-rep panic
