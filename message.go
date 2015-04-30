@@ -3,6 +3,7 @@ package nano
 import (
 	"io"
 	"sync/atomic"
+	"time"
 )
 
 // Message encapsulates the messages that we exchange back and forth.  The
@@ -110,4 +111,19 @@ func NewMessage(sz int) *Message {
 	msg.Body = msg.bodyBuf
 	msg.Header = msg.headerBuf
 	return msg
+}
+
+func monitorMessages() {
+	if !Debug {
+		return
+	}
+
+	ticker := time.NewTicker(time.Second * 10)
+	defer ticker.Stop()
+
+	for _ = range ticker.C {
+		for _, mp := range messagePool {
+			Debugf("%5d: %d", mp.maxBody, len(mp.cache))
+		}
+	}
 }
