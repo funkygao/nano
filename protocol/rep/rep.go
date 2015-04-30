@@ -1,5 +1,7 @@
 // Package rep implements the REP protocol, which is the response side of
 // the request/response pattern.  (REQ is the request.)
+// The REQ-REP socket pair is in lockstep. Doing any other
+// sequence (e.g., sending two messages in a row) will result in error.
 package rep
 
 import (
@@ -18,45 +20,6 @@ type repEp struct {
 	r    *rep
 }
 
-type rep struct {
-	sock         nano.ProtocolSocket
-	eps          map[uint32]*repEp
-	backtracebuf []byte
-	backtrace    []byte
-	backtraceL   sync.Mutex
-	raw          bool
-	ttl          int
-	w            nano.Waiter
-	init         sync.Once
-
-	sync.Mutex
-}
-
-func (r *rep) Init(sock nano.ProtocolSocket) {
-	r.sock = sock
-	r.eps = make(map[uint32]*repEp)
-	r.backtracebuf = make([]byte, 64)
-	r.ttl = 8 // default specified in the RFC
-	r.w.Init()
-	r.sock.SetSendError(nano.ErrProtoState)
-}
-
-func (r *rep) Shutdown(expire time.Time) {
-
-	r.w.WaitAbsTimeout(expire)
-
-	r.Lock()
-	peers := r.eps
-	r.eps = make(map[uint32]*repEp)
-	r.Unlock()
-
-	for id, peer := range peers {
-		delete(peers, id)
-		nano.DrainChannel(peer.q, expire)
-		close(peer.q)
-	}
-}
-
 func (pe *repEp) sender() {
 	for {
 		m := <-pe.q
@@ -71,17 +34,59 @@ func (pe *repEp) sender() {
 	}
 }
 
+type rep struct {
+	sock         nano.ProtocolSocket
+	eps          map[uint32]*repEp
+	backtracebuf []byte
+	backtrace    []byte
+	backtraceL   sync.Mutex
+	raw          bool
+	ttl          int
+	waiter       nano.Waiter
+	once         sync.Once
+
+	sync.Mutex
+}
+
+func (r *rep) Init(sock nano.ProtocolSocket) {
+	r.sock = sock
+	r.eps = make(map[uint32]*repEp)
+	r.backtracebuf = make([]byte, 64)
+	r.ttl = 8 // default specified in the RFC
+	r.waiter.Init()
+	nano.Debugf("set send state: %v, only after recv data will it set send state normal",
+		nano.ErrProtoState)
+	r.sock.SetSendError(nano.ErrProtoState)
+}
+
+func (r *rep) Shutdown(expire time.Time) {
+	r.waiter.WaitAbsTimeout(expire)
+
+	r.Lock()
+	peers := r.eps
+	r.eps = make(map[uint32]*repEp)
+	r.Unlock()
+
+	for id, peer := range peers {
+		delete(peers, id)
+		nano.DrainChannel(peer.q, expire)
+		close(peer.q)
+	}
+}
+
 func (r *rep) receiver(ep nano.Endpoint) {
+	recvChan := r.sock.RecvChannel()
+	closeChan := r.sock.CloseChannel()
 
-	rq := r.sock.RecvChannel()
-	cq := r.sock.CloseChannel()
-
+	var m *nano.Message
 	for {
-
-		m := ep.RecvMsg()
+		nano.Debugf("calling %T.RecvMsg", ep)
+		m = ep.RecvMsg()
 		if m == nil {
 			return
 		}
+
+		nano.Debugf("recv a msg: %#v", *m)
 
 		v := ep.Id()
 		m.Header = append(m.Header,
@@ -107,9 +112,11 @@ func (r *rep) receiver(ep nano.Endpoint) {
 			}
 		}
 
+		nano.Debugf("now msg: %#v", *m)
+
 		select {
-		case rq <- m:
-		case <-cq:
+		case recvChan <- m:
+		case <-closeChan:
 			m.Free()
 			return
 		}
@@ -117,16 +124,15 @@ func (r *rep) receiver(ep nano.Endpoint) {
 }
 
 func (r *rep) sender() {
-	defer r.w.Done()
-	sq := r.sock.SendChannel()
-	cq := r.sock.CloseChannel()
+	defer r.waiter.Done()
+	sendChan := r.sock.SendChannel()
+	closeChan := r.sock.CloseChannel()
 
+	var m *nano.Message
 	for {
-		var m *nano.Message
-
 		select {
-		case m = <-sq:
-		case <-cq:
+		case m = <-sendChan:
+		case <-closeChan:
 			return
 		}
 
@@ -177,15 +183,18 @@ func (*rep) PeerName() string {
 }
 
 func (r *rep) AddEndpoint(ep nano.Endpoint) {
-	pe := &repEp{ep: ep, r: r, q: make(chan *nano.Message, 2)}
+	pe := &repEp{ep: ep, r: r, q: make(chan *nano.Message, 2)} // TODO
 	pe.w.Init()
 	r.Lock()
-	r.init.Do(func() {
-		r.w.Add()
+	r.once.Do(func() {
+		r.waiter.Add()
 		go r.sender()
 	})
 	r.eps[ep.Id()] = pe
 	r.Unlock()
+
+	nano.Debugf("%#v, go receiver, sender...", ep)
+
 	go r.receiver(ep)
 	go pe.sender()
 }
@@ -194,6 +203,7 @@ func (r *rep) RemoveEndpoint(ep nano.Endpoint) {
 	r.Lock()
 	delete(r.eps, ep.Id())
 	r.Unlock()
+	nano.Debugf("%#v", ep)
 }
 
 // We save the backtrace from this message.  This means that if the app calls
@@ -204,6 +214,8 @@ func (r *rep) RecvHook(m *nano.Message) bool {
 	if r.raw {
 		return true
 	}
+
+	nano.Debugf("send state normal, msg: %+v", *m)
 	r.sock.SetSendError(nil)
 	r.backtraceL.Lock()
 	r.backtrace = append(r.backtracebuf[0:0], m.Header...)
@@ -219,9 +231,12 @@ func (r *rep) SendHook(m *nano.Message) bool {
 	if r.raw {
 		return true
 	}
+
 	r.sock.SetSendError(nano.ErrProtoState)
 	r.backtraceL.Lock()
+	nano.Debugf("before hook msg: %#v", *m)
 	m.Header = append(m.Header[0:0], r.backtrace...)
+	nano.Debugf("after hook msg: %#v", *m)
 	r.backtrace = nil
 	r.backtraceL.Unlock()
 	if m.Header == nil {

@@ -1,6 +1,7 @@
 package nano
 
 import (
+	"io"
 	"sync/atomic"
 )
 
@@ -76,6 +77,12 @@ func (this *Message) Clone() *Message {
 	return nil
 }
 
+// WriteTo writes complete message body to a writer or
+// when an error occurs.
+func (this *Message) WriteTo(w io.Writer) (int, error) {
+	return w.Write(this.Body)
+}
+
 // NewMessage is the supported way to obtain a new Message.  This makes
 // use of a "cache" which greatly reduces the load on the garbage collector.
 func NewMessage(sz int) *Message {
@@ -97,7 +104,6 @@ func NewMessage(sz int) *Message {
 		msg.slabSize = sz
 		msg.bodyBuf = make([]byte, 0, msg.slabSize)
 		msg.headerBuf = make([]byte, 0, 32) // TODO
-
 	}
 
 	msg.refCount = 1

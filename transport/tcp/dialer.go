@@ -6,6 +6,7 @@ import (
 	"github.com/funkygao/nano"
 )
 
+// dialer implements the nano.PipeDialer interface.
 type dialer struct {
 	addr  *net.TCPAddr
 	proto nano.Protocol
@@ -22,6 +23,8 @@ func (this *dialer) Dial() (nano.Pipe, error) {
 		conn.Close()
 		return nil, err
 	}
+
+	nano.Debugf("dial tcp:%v done, NewConnPipe...", *this.addr)
 
 	return nano.NewConnPipe(conn, this.proto)
 }

@@ -3,6 +3,7 @@ package nano
 // Dialer is an interface to the underlying dialer for a transport
 // and address.
 type Dialer interface {
+
 	// Close closes the dialer, and removes it from any active socket.
 	// Further operations on the Dialer will return ErrClosed.
 	Close() error

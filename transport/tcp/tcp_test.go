@@ -242,7 +242,7 @@ func TestTCPOptions(t *testing.T) {
 	t.Logf("Options are %v", interface{}(d).(*dialer).opts)
 
 	// Valid Boolean Options
-	for _, n := range []string{nano.OptionNoDelay, nano.OptionKeepAlive} {
+	for _, n := range []string{nano.OptionNoDelay} {
 		t.Logf("Checking option %s", n)
 
 		if err := d.SetOption(n, true); err != nil {

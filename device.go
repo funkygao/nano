@@ -14,6 +14,11 @@ package nano
 // to exit.  Apart from closing the socket(s), no futher operations should be
 // performed against the socket.
 func Device(s1 Socket, s2 Socket) error {
+	// At least one must be non-nil
+	if s1 == nil && s2 == nil {
+		return ErrClosed
+	}
+
 	// Is one of the sockets nil?
 	if s1 == nil {
 		s1 = s2
@@ -21,14 +26,9 @@ func Device(s1 Socket, s2 Socket) error {
 	if s2 == nil {
 		s2 = s1
 	}
-	// At least one must be non-nil
-	if s1 == nil || s2 == nil {
-		return ErrClosed
-	}
 
 	p1 := s1.GetProtocol()
 	p2 := s2.GetProtocol()
-
 	if !ValidPeers(p1, p2) {
 		return ErrBadProto
 	}

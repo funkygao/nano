@@ -5,6 +5,7 @@ package nano
 // messaging topology.  Applications can have more than one Socket open
 // at a time.
 type Socket interface {
+
 	// Close closes the open Socket.  Further operations on the socket
 	// will return ErrClosed.
 	Close() error

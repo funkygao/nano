@@ -1,7 +1,20 @@
 package nano
 
-// defaultQLen is the default length of the upper read/write queues.
-const defaultQLen = 128
+import (
+	"time"
+)
+
+const (
+	// defaultChanLen is the default length of the read/write memory channel.
+	defaultChanLen = 128
+
+	// defaultBufferSize is the default bufio buffer size.
+	defaultBufferSize = 16 * 1024
+
+	defaultRedialTime = time.Millisecond * 100
+	defaultRedialMax  = time.Minute
+	defaultLingerTime = time.Second
+)
 
 // The following are Properties which are exposed on a Port.
 
@@ -105,12 +118,9 @@ const (
 	// Dial or Listen has been called on the socket.
 	OptionReadQLen = "READQ-LEN"
 
-	// OptionKeepAlive is used to set TCP KeepAlive.  Value is a boolean.
-	// Default is true.
-	OptionKeepAlive = "KEEPALIVE"
-
 	// OptionNoDelay is used to configure Nagle -- when true messages are
 	// sent as soon as possible, otherwise some buffering may occur.
+	// nagle's only applies to client rather than server.
 	// Value is a boolean.  Default is true.
 	OptionNoDelay = "NO-DELAY"
 

@@ -5,13 +5,15 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/funkygao/golib/color"
 )
 
 var (
 	Debug = true
 )
 
-func debugf(format string, args ...interface{}) {
+func Debugf(format string, args ...interface{}) {
 	if Debug {
 		pc, file, line, ok := runtime.Caller(1)
 		if !ok {
@@ -30,7 +32,7 @@ func debugf(format string, args ...interface{}) {
 
 		fmt.Printf("DEBUG: [%d:%d:%d.%04d] %s:%d(%s): %s\n",
 			hour, min, sec, nanosec,
-			file, line, fnparts[len(fnparts)-1],
+			file, line, color.Red(fnparts[len(fnparts)-1]),
 			fmt.Sprintf(format, args...))
 	}
 }

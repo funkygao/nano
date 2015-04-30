@@ -30,8 +30,10 @@ func DrainChannel(ch chan<- *Message, expire time.Time) bool {
 
 	for {
 		if len(ch) == 0 {
+			// all drained
 			return true
 		}
+
 		now := time.Now()
 		if now.After(expire) {
 			return false
@@ -43,7 +45,53 @@ func DrainChannel(ch chan<- *Message, expire time.Time) bool {
 		dur = expire.Sub(now)
 		if dur > time.Millisecond*10 {
 			dur = time.Millisecond * 10
+		} else if dur < time.Millisecond {
+			dur = time.Millisecond
 		}
+
 		time.Sleep(dur)
+	}
+}
+
+func ProtocolName(number uint16) string {
+	names := map[uint16]string{
+		ProtoPair:       "pair",
+		ProtoPub:        "pub",
+		ProtoSub:        "sub",
+		ProtoReq:        "req",
+		ProtoRep:        "rep",
+		ProtoPush:       "push",
+		ProtoPull:       "pull",
+		ProtoSurveyor:   "surveyor",
+		ProtoRespondent: "respondent",
+		ProtoBus:        "bus"}
+	return names[number]
+}
+
+// ValidPeers returns true if the two sockets are capable of
+// peering to one another.  For example, REQ can peer with REP,
+// but not with BUS.
+func ValidPeers(p1, p2 Protocol) bool {
+	if p1.Number() != p2.PeerNumber() {
+		return false
+	}
+	if p2.Number() != p1.PeerNumber() {
+		return false
+	}
+	return true
+}
+
+// NullRecv simply loops, receiving and discarding messages, until the
+// Endpoint returns back a nil message.  This allows the Endpoint to notice
+// a dropped connection.  It is intended for use by Protocols that are write
+// only -- it lets them become aware of a loss of connectivity even when they
+// have no data to send.
+func NullRecv(ep Endpoint) {
+	for {
+		if m := ep.RecvMsg(); m == nil {
+			return
+		} else {
+			m.Free()
+		}
 	}
 }

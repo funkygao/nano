@@ -8,6 +8,7 @@ import (
 // to the underlying stream transport.  It can be thought of as one side
 // of a TCP, IPC, or other type of connection.
 type Endpoint interface {
+
 	// Id returns a unique 31-bit value associated with the Endpoint.
 	// The value is unique for a given socket, at a given time.
 	Id() uint32
@@ -79,7 +80,7 @@ type ProtocolRecvHook interface {
 	// RecvHook is called just before the message is handed to the
 	// application.  The message may be modified.  If false is returned,
 	// then the message is dropped.
-	RecvHook(*Message) bool
+	RecvHook(*Message) bool // TODO return error instead of bool
 }
 
 // ProtocolSendHook is intended to be an additional extension
@@ -89,7 +90,7 @@ type ProtocolSendHook interface {
 	// If false is returned, the message will be silently dropped.
 	// Note that the message may be dropped for other reasons,
 	// such as if backpressure is applied.
-	SendHook(*Message) bool
+	SendHook(*Message) bool // TODO return error instead of bool
 }
 
 // ProtocolSocket is the "handle" given to protocols to interface with the
@@ -97,6 +98,7 @@ type ProtocolSendHook interface {
 // except by using functions made available on the ProtocolSocket.  Note
 // that all functions listed here are non-blocking.
 type ProtocolSocket interface {
+
 	// SendChannel represents the channel used to send messages.  The
 	// application injects messages to it, and the protocol consumes
 	// messages from it.  When the socket is done sending, it will send
@@ -135,47 +137,4 @@ type ProtocolSocket interface {
 	// waiting to send a message that will never be delivered (e.g. due
 	// to incorrect state.)  If set to nil, then TX works normally.
 	SetSendError(error)
-}
-
-func ProtocolName(number uint16) string {
-	names := map[uint16]string{
-		ProtoPair:       "pair",
-		ProtoPub:        "pub",
-		ProtoSub:        "sub",
-		ProtoReq:        "req",
-		ProtoRep:        "rep",
-		ProtoPush:       "push",
-		ProtoPull:       "pull",
-		ProtoSurveyor:   "surveyor",
-		ProtoRespondent: "respondent",
-		ProtoBus:        "bus"}
-	return names[number]
-}
-
-// ValidPeers returns true if the two sockets are capable of
-// peering to one another.  For example, REQ can peer with REP,
-// but not with BUS.
-func ValidPeers(p1, p2 Protocol) bool {
-	if p1.Number() != p2.PeerNumber() {
-		return false
-	}
-	if p2.Number() != p1.PeerNumber() {
-		return false
-	}
-	return true
-}
-
-// NullRecv simply loops, receiving and discarding messages, until the
-// Endpoint returns back a nil message.  This allows the Endpoint to notice
-// a dropped connection.  It is intended for use by Protocols that are write
-// only -- it lets them become aware of a loss of connectivity even when they
-// have no data to send.
-func NullRecv(ep Endpoint) {
-	for {
-		if m := ep.RecvMsg(); m == nil {
-			return
-		} else {
-			m.Free()
-		}
-	}
 }
