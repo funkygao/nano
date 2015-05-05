@@ -2,3 +2,4 @@ examples/pair/pair
 examples/pipeline/bench
 examples/pubsub/pubsub
 examples/reqrep/reqrep
+examples/api/api
