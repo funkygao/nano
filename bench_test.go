@@ -53,3 +53,11 @@ func BenchmarkBufferPoolGetThenPut(b *testing.B) {
 		bufferPoolPut(buf)
 	}
 }
+
+func BenchmarkTimeAfter(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		select {
+		case <-time.After(time.Nanosecond):
+		}
+	}
+}
