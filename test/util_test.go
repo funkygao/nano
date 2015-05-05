@@ -10,9 +10,13 @@ import (
 
 func TestStripScheme(t *testing.T) {
 	trans := tcp.NewTransport()
-	s, err := nano.StripScheme(trans, "tcp://192.168.0.111:5555")
+	addr, err := nano.StripScheme(trans, "tcp://192.168.0.111:5555")
 	assert.Equal(t, nil, err)
-	assert.Equal(t, "192.168.0.111:5555", s)
+	assert.Equal(t, "192.168.0.111:5555", addr)
+
+	addr, err = nano.StripScheme(trans, "tcp://eth1;127.0.0.1:1234")
+	assert.Equal(t, "eth1;127.0.0.1:1234", addr)
+	assert.Equal(t, nil, err)
 }
 
 func BenchmarkStripScheme(b *testing.B) {

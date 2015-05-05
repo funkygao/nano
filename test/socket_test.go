@@ -7,11 +7,11 @@ import (
 
 	"github.com/funkygao/assert"
 	"github.com/funkygao/nano"
-	"github.com/funkygao/nano/protocol/req"
+	"github.com/funkygao/nano/protocol/reqrep"
 )
 
 func TestSocketCloseMoreThanOnce(t *testing.T) {
-	sock, _ := req.NewSocket()
+	sock := reqrep.NewReqSocket()
 	err := sock.Close()
 	assert.Equal(t, nil, err)
 	err = sock.Close()
@@ -19,7 +19,7 @@ func TestSocketCloseMoreThanOnce(t *testing.T) {
 }
 
 func TestSocketConcurrentClose(t *testing.T) {
-	sock, _ := req.NewSocket()
+	sock := reqrep.NewReqSocket()
 	var n int32
 	var wg sync.WaitGroup
 	const c = 10
