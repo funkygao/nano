@@ -24,11 +24,16 @@ Enjoy!
 Currently supported transports:
 
 - tcp
-  tcp://[eth0;]<host>:<port>
+
+  `tcp://[eth0;]<host>:<port>`
+
 - ipc
-  ipc://<unix_domain_socket_path>
+
+  `ipc://<unix_domain_socket_path>`
+
 - tls
-  tls+tcp://<host>:<port>
+
+  `tls+tcp://<host>:<port>`
 
 #### Pluggable Protocol
 
