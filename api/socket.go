@@ -19,7 +19,7 @@ const (
 )
 
 // Protocol is the numeric abstraction to the various protocols or patterns
-// that nano supports
+// that nano supports.
 type Protocol int
 
 const (
