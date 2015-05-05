@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/funkygao/nano"
 	"github.com/funkygao/nano/api"
@@ -14,7 +15,7 @@ var (
 )
 
 func init() {
-	nano.Debug = false
+	nano.Debug = true
 }
 
 func usage() {
@@ -35,10 +36,10 @@ func doPub() {
 
 	body := []byte(strings.Repeat("X", 100))
 	for {
-		n, err := s.Send(body, 0)
+		_, err := s.Send(body, 0)
 		dieIfErr(err)
 
-		fmt.Println(n)
+		time.Sleep(time.Second)
 	}
 
 }
