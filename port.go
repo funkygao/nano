@@ -4,6 +4,8 @@ package nano
 // channel.  There is one of these associated with a given TCP connection,
 // for example.  This interface is intended for application use.
 //
+// Port is named after erlang port.
+//
 // Note that applicatons cannot send or receive data on a Port directly.
 type Port interface {
 

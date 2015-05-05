@@ -11,7 +11,7 @@ type socket struct {
 	proto      Protocol
 	transports map[string]Transport
 
-	sync.Mutex
+	sync.RWMutex
 
 	sendChan     chan *Message
 	sendChanSize int
@@ -33,8 +33,8 @@ type socket struct {
 
 	pipes []*pipeEndpoint // TODO rename eps []Endpoint
 
-	sendHook ProtocolSendHook
-	recvHook ProtocolRecvHook
+	sendHook ProtocolSendHook // pipeline/reqrep/survey are hooking
+	recvHook ProtocolRecvHook // bus/reqrep/survey are hooking
 
 	portHook PortHook
 }
@@ -154,9 +154,9 @@ func (sock *socket) Close() error {
 }
 
 func (sock *socket) SendMsg(msg *Message) error {
-	sock.Lock()
-	err := sock.sendErr // copy err
-	sock.Unlock()
+	sock.RLock()
+	err := sock.sendErr
+	sock.RUnlock()
 	if err != nil {
 		return err
 	}
@@ -167,52 +167,58 @@ func (sock *socket) SendMsg(msg *Message) error {
 		Debugf("sendHook: %+v", *msg)
 		if ok := sock.sendHook.SendHook(msg); !ok {
 			// just drop it silently TODO ErrsendHook?
-			msg.Free()
+			Debugf("hook fail: %+v", *msg)
+			msg.Free() // safe to recycle
 			return nil
 		}
 	}
 
 	select {
 	case <-mkTimer(sock.writeDeadline):
-		Debugf("write timeout")
 		return ErrSendTimeout
+
 	case <-sock.closeChan:
-		Debugf("socket closed")
 		return ErrClosed
+
 	case sock.sendChan <- msg:
-		Debugf("put to send chan: %+v", *msg)
 		return nil
 	}
 }
 
 func (sock *socket) RecvMsg() (*Message, error) {
-	sock.Lock()
-	e := sock.recvErr
-	sock.Unlock()
-	if e != nil {
-		return nil, e
+	sock.RLock()
+	err := sock.recvErr
+	sock.RUnlock()
+	if err != nil {
+		return nil, err
 	}
 
-	timeout := mkTimer(sock.readDeadline)
-	var msg *Message
+	var (
+		timeout = mkTimer(sock.readDeadline)
+		msg     *Message
+	)
 	for {
 		select {
 		case <-timeout:
 			return nil, ErrRecvTimeout
+
 		case msg = <-sock.recvChan:
 			Debugf("recv msg: %+v", *msg)
 
 			if sock.recvHook != nil {
 				Debugf("RecvHook: %+v", *msg)
 				if ok := sock.recvHook.RecvHook(msg); ok {
+					Debugf("hook fail: %+v", *msg)
 					return msg, nil
-				} // else loop
-				msg.Free()
+				} else {
+					// discard this msg and get next msg
+					msg.Free()
+				}
 			} else {
 				return msg, nil
 			}
+
 		case <-sock.closeChan:
-			Debugf("socket closed")
 			return nil, ErrClosed
 		}
 	}
@@ -230,6 +236,7 @@ func (sock *socket) Recv() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return msg.Body, nil // FIXME when to msg.Free?
 }
 
@@ -254,12 +261,14 @@ func (sock *socket) NewDialer(addr string, options map[string]interface{}) (Dial
 		return nil, e
 	}
 
-	d := &dialer{
-		sock:      sock,
-		addr:      addr,
-		closeChan: make(chan struct{}),
-	}
-	var err error
+	var (
+		d = &dialer{
+			sock:      sock,
+			addr:      addr,
+			closeChan: make(chan struct{}),
+		}
+		err error
+	)
 	if d.d, err = t.NewDialer(addr, sock.proto); err != nil {
 		return nil, err
 	}
@@ -475,7 +484,7 @@ func (this *dialer) Dial() error {
 	this.sock.active = true
 	this.sock.Unlock()
 
-	Debugf("sock is active, go dialer...")
+	Debugf("sock is active, go dialing...")
 
 	// keep dialing
 	go this.dialing()
