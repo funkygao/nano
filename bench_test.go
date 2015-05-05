@@ -46,3 +46,10 @@ func BenchmarkNewMessageSize1KNoFree(b *testing.B) {
 		NewMessage(1 << 10)
 	}
 }
+
+func BenchmarkBufferPoolGetThenPut(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		buf := bufferPoolGet()
+		bufferPoolPut(buf)
+	}
+}
