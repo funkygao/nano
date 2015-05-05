@@ -1,4 +1,4 @@
-package nanoapi
+package api
 
 import (
 	"github.com/funkygao/nano"
