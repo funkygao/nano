@@ -1,9 +1,7 @@
 package nano
 
 import (
-	"math/rand"
 	"sync"
-	"time"
 )
 
 // TODO duplicated with socket.pipes
@@ -27,11 +25,6 @@ type pipeEndpoint struct {
 	index     int // index in master list of pipes for socket
 
 	sync.Mutex
-}
-
-func init() {
-	pipes.byid = make(map[uint32]*pipeEndpoint)
-	pipes.nextid = uint32(rand.NewSource(time.Now().UnixNano()).Int63())
 }
 
 func newPipeEndpoint(connPipe Pipe, d *dialer, l *listener) *pipeEndpoint {
