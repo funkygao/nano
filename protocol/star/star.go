@@ -198,12 +198,7 @@ func (x *star) GetOption(name string) (interface{}, error) {
 	}
 }
 
-// NewProtocol returns a new STAR protocol object.
-func NewProtocol() nano.Protocol {
-	return &star{}
-}
-
 // NewSocket allocates a new Socket using the STAR protocol.
-func NewSocket() (nano.Socket, error) {
-	return nano.MakeSocket(&star{}), nil
+func NewSocket() nano.Socket {
+	return nano.MakeSocket(&star{})
 }

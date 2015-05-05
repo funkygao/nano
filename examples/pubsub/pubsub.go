@@ -6,8 +6,7 @@ import (
 	"strings"
 
 	"github.com/funkygao/nano"
-	"github.com/funkygao/nano/protocol/pub"
-	"github.com/funkygao/nano/protocol/sub"
+	"github.com/funkygao/nano/protocol/pubsub"
 	"github.com/funkygao/nano/transport"
 )
 
@@ -31,9 +30,7 @@ func dieIfErr(err error) {
 }
 
 func doPub() {
-	sock, err := pub.NewSocket()
-	dieIfErr(err)
-
+	sock := pubsub.NewPubSocket()
 	transport.AddAll(sock)
 	dieIfErr(sock.Listen(addr))
 
@@ -45,9 +42,7 @@ func doPub() {
 }
 
 func doSub() {
-	sock, err := sub.NewSocket()
-	dieIfErr(err)
-
+	sock := pubsub.NewSubSocket()
 	transport.AddAll(sock)
 	dieIfErr(sock.Dial(addr))
 	// Empty byte array effectively subscribes to everything

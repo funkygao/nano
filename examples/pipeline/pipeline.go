@@ -10,8 +10,7 @@ package main
 
 import (
 	"github.com/funkygao/nano"
-	"github.com/funkygao/nano/protocol/pull"
-	"github.com/funkygao/nano/protocol/push"
+	"github.com/funkygao/nano/protocol/pipeline"
 	"github.com/funkygao/nano/transport"
 	"log"
 	"os"
@@ -30,13 +29,11 @@ func dieIfErr(err error) {
 }
 
 func doForward(fromAddr, toAddr string) {
-	pullSock, err := pull.NewSocket()
-	dieIfErr(err)
+	pullSock := pipeline.NewPullSocket()
 	transport.AddAll(pullSock)
 	dieIfErr(pullSock.Listen(fromAddr))
 
-	pushSock, err := push.NewSocket()
-	dieIfErr(err)
+	pushSock := pipeline.NewPushSocket()
 	transport.AddAll(pushSock)
 	dieIfErr(pushSock.Dial(toAddr))
 
@@ -48,9 +45,7 @@ func doForward(fromAddr, toAddr string) {
 }
 
 func doPull(addr string) {
-	sock, err := pull.NewSocket()
-	dieIfErr(err)
-
+	sock := pipeline.NewPullSocket()
 	transport.AddAll(sock)
 	dieIfErr(sock.Listen(addr))
 
@@ -66,9 +61,7 @@ func doPull(addr string) {
 }
 
 func doPush(addr string) {
-	sock, err := push.NewSocket()
-	dieIfErr(err)
-
+	sock := pipeline.NewPushSocket()
 	transport.AddAll(sock)
 	dieIfErr(sock.Dial(addr))
 

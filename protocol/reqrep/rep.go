@@ -1,8 +1,4 @@
-// Package rep implements the REP protocol, which is the response side of
-// the request/response pattern.  (REQ is the request.)
-// The REQ-REP socket pair is in lockstep. Doing any other
-// sequence (e.g., sending two messages in a row) will result in error.
-package rep
+package reqrep
 
 import (
 	"encoding/binary"
@@ -283,12 +279,7 @@ func (r *rep) GetOption(name string) (interface{}, error) {
 	}
 }
 
-// NewProtocol returns a new REP protocol object.
-func NewProtocol() nano.Protocol {
-	return &rep{}
-}
-
-// NewSocket allocates a new Socket using the REP protocol.
-func NewSocket() (nano.Socket, error) {
-	return nano.MakeSocket(&rep{}), nil
+// NewRepSocket allocates a new Socket using the REP protocol.
+func NewRepSocket() nano.Socket {
+	return nano.MakeSocket(&rep{})
 }

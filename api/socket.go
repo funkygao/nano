@@ -2,10 +2,8 @@ package api
 
 import (
 	"github.com/funkygao/nano"
-	"github.com/funkygao/nano/protocol/pub"
-	"github.com/funkygao/nano/protocol/rep"
-	"github.com/funkygao/nano/protocol/req"
-	"github.com/funkygao/nano/protocol/sub"
+	"github.com/funkygao/nano/protocol/pubsub"
+	"github.com/funkygao/nano/protocol/reqrep"
 	"github.com/funkygao/nano/transport"
 )
 
@@ -44,25 +42,21 @@ type Socket struct {
 
 // TODO getsockopt/setsockopt: sendbuf, nodelay, keepalive, etc
 func NewSocket(d Domain, p Protocol) (*Socket, error) {
-	var err error
 	sock := &Socket{protocol: p, domain: d}
 	switch p {
 	case PUB:
-		sock.sock, err = pub.NewSocket()
+		sock.sock = pubsub.NewPubSocket()
 	case SUB:
-		sock.sock, err = sub.NewSocket()
+		sock.sock = pubsub.NewSubSocket()
 	case REQ:
-		sock.sock, err = req.NewSocket()
+		sock.sock = reqrep.NewReqSocket()
 	case REP:
-		sock.sock, err = rep.NewSocket()
+		sock.sock = reqrep.NewRepSocket()
 	default:
-		err = ErrBadProtocol
-	}
-	if err != nil {
-		sock.sock.Close()
-		return nil, err
+		return nil, ErrBadProtocol
 	}
 
+	var err error
 	switch d {
 	case AF_SP:
 	case AF_SP_RAW:

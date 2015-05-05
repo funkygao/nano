@@ -1,8 +1,4 @@
-// Package sub implements the SUB protocol.  This protocol receives messages
-// from publishers (PUB peers).  The messages are filtered based on
-// subscription, such that only subscribed messages (see OptionSubscribe) are
-// received.
-package sub
+package pubsub
 
 import (
 	"bytes"
@@ -152,12 +148,7 @@ func (s *sub) GetOption(name string) (interface{}, error) {
 	}
 }
 
-// NewProtocol returns a new SUB protocol object.
-func NewProtocol() nano.Protocol {
-	return &sub{}
-}
-
-// NewSocket allocates a new Socket using the SUB protocol.
-func NewSocket() (nano.Socket, error) {
-	return nano.MakeSocket(&sub{}), nil
+// NewSubSocket allocates a new Socket using the SUB protocol.
+func NewSubSocket() nano.Socket {
+	return nano.MakeSocket(&sub{})
 }

@@ -52,11 +52,7 @@ func runServer(seq int) {
 	go db.Launch(":8000")
 	browser.OpenURL("http://localhost:8000/")
 
-	sock, err := pair.NewSocket()
-	if err != nil {
-		panic(err)
-	}
-
+	sock := pair.NewSocket()
 	transport.AddAll(sock)
 	if err := sock.Listen(addr); err != nil {
 		panic(err)
@@ -84,11 +80,7 @@ func runServer(seq int) {
 }
 
 func runClient(seq int) {
-	sock, err := pair.NewSocket()
-	if err != nil {
-		panic(err)
-	}
-
+	sock := pair.NewSocket()
 	transport.AddAll(sock)
 	if err := sock.Dial(addr); err != nil {
 		panic(err)

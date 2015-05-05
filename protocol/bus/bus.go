@@ -209,12 +209,7 @@ func (x *bus) GetOption(name string) (interface{}, error) {
 	}
 }
 
-// NewProtocol returns a new BUS protocol object.
-func NewProtocol() nano.Protocol {
-	return &bus{}
-}
-
 // NewSocket allocates a new Socket using the BUS protocol.
-func NewSocket() (nano.Socket, error) {
-	return nano.MakeSocket(&bus{}), nil
+func NewSocket() nano.Socket {
+	return nano.MakeSocket(&bus{})
 }

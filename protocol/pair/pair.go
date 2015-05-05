@@ -129,12 +129,7 @@ func (this *pair) GetOption(name string) (interface{}, error) {
 	}
 }
 
-// NewProtocol returns a new PAIR protocol object.
-func NewProtocol() nano.Protocol {
-	return &pair{}
-}
-
 // NewSocket allocates a new Socket using the PAIR protocol.
-func NewSocket() (nano.Socket, error) {
-	return nano.MakeSocket(&pair{}), nil
+func NewSocket() nano.Socket {
+	return nano.MakeSocket(&pair{})
 }

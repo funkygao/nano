@@ -1,13 +1,11 @@
-// Package respondent implements the RESPONDENT protocol.  This protocol
-// receives SURVEYOR requests, and responds with an answer.
-package respondent
+package survey
 
 import (
 	"encoding/binary"
 	"sync"
 	"time"
 
-	nano "github.com/funkygao/nano"
+	"github.com/funkygao/nano"
 )
 
 type resp struct {
@@ -260,12 +258,7 @@ func (x *resp) GetOption(name string) (interface{}, error) {
 	}
 }
 
-// NewProtocol returns a new RESPONDENT protocol object.
-func NewProtocol() nano.Protocol {
-	return &resp{}
-}
-
-// NewSocket allocates a new Socket using the RESPONDENT protocol.
-func NewSocket() (nano.Socket, error) {
-	return nano.MakeSocket(&resp{}), nil
+// NewRespondentSocket allocates a new Socket using the RESPONDENT protocol.
+func NewRespondentSocket() nano.Socket {
+	return nano.MakeSocket(&resp{})
 }

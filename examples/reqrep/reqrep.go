@@ -2,8 +2,7 @@ package main
 
 import (
 	"github.com/funkygao/nano"
-	"github.com/funkygao/nano/protocol/rep"
-	"github.com/funkygao/nano/protocol/req"
+	"github.com/funkygao/nano/protocol/reqrep"
 	"github.com/funkygao/nano/transport"
 	"log"
 	"os"
@@ -22,9 +21,7 @@ func dieIfErr(err error) {
 }
 
 func request(addr string) {
-	sock, err := req.NewSocket()
-	dieIfErr(err)
-
+	sock := reqrep.NewReqSocket()
 	transport.AddAll(sock)
 	dieIfErr(sock.SetOption(nano.OptionReadQLen, 4<<10)) // must be before Dial
 	dieIfErr(sock.SetOption(nano.OptionWriteQLen, 4<<10))
@@ -32,7 +29,7 @@ func request(addr string) {
 	dieIfErr(sock.SetOption(nano.OptionSendDeadline, time.Second))
 
 	for i := 0; i < 2; i++ {
-		err = sock.Send([]byte(strings.Repeat("X", 10)))
+		err := sock.Send([]byte(strings.Repeat("X", 10)))
 		dieIfErr(err)
 
 		msg, err := sock.Recv()
@@ -46,9 +43,7 @@ func request(addr string) {
 }
 
 func reply(addr string) {
-	sock, err := rep.NewSocket()
-	dieIfErr(err)
-
+	sock := reqrep.NewRepSocket()
 	transport.AddAll(sock)
 	dieIfErr(sock.Listen(addr))
 	log.Printf("listening on %s", addr)
