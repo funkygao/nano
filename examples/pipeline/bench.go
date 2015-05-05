@@ -10,8 +10,7 @@ import (
 	"github.com/funkygao/golib/dashboard"
 	"github.com/funkygao/golib/stress"
 	"github.com/funkygao/nano"
-	"github.com/funkygao/nano/protocol/pull"
-	"github.com/funkygao/nano/protocol/push"
+	"github.com/funkygao/nano/protocol/pipeline"
 	"github.com/funkygao/nano/transport"
 	"github.com/pkg/browser"
 )
@@ -52,11 +51,7 @@ func runPull(seq int) {
 	go db.Launch(":8000")
 	browser.OpenURL("http://localhost:8000/")
 
-	sock, err := pull.NewSocket()
-	if err != nil {
-		panic(err)
-	}
-
+	sock := pipeline.NewPullSocket()
 	transport.AddAll(sock)
 	if err := sock.Listen(addr); err != nil {
 		panic(err)
@@ -79,11 +74,7 @@ func runPull(seq int) {
 }
 
 func runPush(seq int) {
-	sock, err := push.NewSocket()
-	if err != nil {
-		panic(err)
-	}
-
+	sock := pipeline.NewPushSocket()
 	transport.AddAll(sock)
 	if err := sock.Dial(addr); err != nil {
 		panic(err)

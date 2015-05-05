@@ -1,13 +1,11 @@
-// Package surveyor implements the SURVEYOR protocol. This sends messages
-// out to RESPONDENT partners, and receives their responses.
-package surveyor
+package survey
 
 import (
 	"encoding/binary"
 	"sync"
 	"time"
 
-	nano "github.com/funkygao/nano"
+	"github.com/funkygao/nano"
 )
 
 const defaultSurveyTime = time.Second
@@ -245,12 +243,7 @@ func (x *surveyor) GetOption(name string) (interface{}, error) {
 	}
 }
 
-// NewProtocol returns a new SURVEYOR protocol object.
-func NewSurveyor() nano.Protocol {
-	return &surveyor{}
-}
-
-// NewSocket allocates a new Socket using the SURVEYOR protocol.
-func NewSocket() (nano.Socket, error) {
-	return nano.MakeSocket(&surveyor{duration: defaultSurveyTime}), nil
+// NewSurveyorSocket allocates a new Socket using the SURVEYOR protocol.
+func NewSurveyorSocket() nano.Socket {
+	return nano.MakeSocket(&surveyor{duration: defaultSurveyTime})
 }

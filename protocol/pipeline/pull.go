@@ -1,11 +1,9 @@
-// Package pull implements the PULL protocol, which is the read side of
-// the pipeline pattern.  (PUSH is the reader.)
-package pull
+package pipeline
 
 import (
 	"time"
 
-	nano "github.com/funkygao/nano"
+	"github.com/funkygao/nano"
 )
 
 type pull struct {
@@ -86,12 +84,7 @@ func (x *pull) GetOption(name string) (interface{}, error) {
 	}
 }
 
-// NewProtocol() allocates a new PULL protocol object.
-func NewProtocol() nano.Protocol {
-	return &pull{}
-}
-
-// NewSocket allocates a new Socket using the PULL protocol.
-func NewSocket() (nano.Socket, error) {
-	return nano.MakeSocket(&pull{}), nil
+// NewPullSocket allocates a new Socket using the PULL protocol.
+func NewPullSocket() nano.Socket {
+	return nano.MakeSocket(&pull{})
 }

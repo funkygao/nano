@@ -1,7 +1,4 @@
-// Package pub implements the PUB protocol.  This protocol publishes messages
-// to subscribers (SUB peers).  The subscribers will filter incoming messages
-// from the publisher based on their subscription.
-package pub
+package pubsub
 
 import (
 	"sync"
@@ -157,12 +154,7 @@ func (p *pub) GetOption(name string) (interface{}, error) {
 	}
 }
 
-// NewProtocol returns a new PUB protocol object.
-func NewProtocol() nano.Protocol {
-	return &pub{}
-}
-
-// NewSocket allocates a new Socket using the PUB protocol.
-func NewSocket() (nano.Socket, error) {
-	return nano.MakeSocket(&pub{}), nil
+// NewPubSocket allocates a new Socket using the PUB protocol.
+func NewPubSocket() nano.Socket {
+	return nano.MakeSocket(&pub{})
 }

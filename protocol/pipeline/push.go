@@ -1,6 +1,4 @@
-// Package push implements the PUSH protocol, which is the write side of
-// the pipeline pattern.  (PULL is the reader.)
-package push
+package pipeline
 
 import (
 	"time"
@@ -89,12 +87,7 @@ func (x *push) GetOption(name string) (interface{}, error) {
 	}
 }
 
-// NewProtocol returns a new PUSH protocol object.
-func NewProtocol() nano.Protocol {
-	return &push{}
-}
-
-// NewSocket allocates a new Socket using the PUSH protocol.
-func NewSocket() (nano.Socket, error) {
-	return nano.MakeSocket(&push{}), nil
+// NewPushSocket allocates a new Socket using the PUSH protocol.
+func NewPushSocket() nano.Socket {
+	return nano.MakeSocket(&push{})
 }
