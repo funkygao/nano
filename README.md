@@ -50,6 +50,10 @@ Currently supported protocols:
 
 #### Data Flow
 
+    protocol.NewSocket -> nano.MakeSocket(proto) -> protocol.Init
+
+    sock.SendMsg -> sock.sendChan -> protocol.senderGoRoutine -> protocol.ep.SendMsg -> connPipe.SendMsg
+
 #### Reducing GC Presure
 
 #### Timers
