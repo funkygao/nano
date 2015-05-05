@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	nano "github.com/funkygao/nano"
+	"github.com/funkygao/nano"
 )
 
 type sub struct {
@@ -28,7 +28,6 @@ func (s *sub) Init(sock nano.ProtocolSocket) {
 func (*sub) Shutdown(time.Time) {} // No sender to drain.
 
 func (s *sub) receiver(ep nano.Endpoint) {
-
 	rq := s.sock.RecvChannel()
 	cq := s.sock.CloseChannel()
 

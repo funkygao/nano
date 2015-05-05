@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	nano "github.com/funkygao/nano"
+	"github.com/funkygao/nano"
 )
 
 type pubEp struct {
@@ -35,7 +35,6 @@ func (p *pub) Init(sock nano.ProtocolSocket) {
 }
 
 func (p *pub) Shutdown(expire time.Time) {
-
 	p.w.WaitAbsTimeout(expire)
 
 	p.Lock()
@@ -52,7 +51,6 @@ func (p *pub) Shutdown(expire time.Time) {
 
 // Bottom sender.
 func (pe *pubEp) peerSender() {
-
 	for {
 		m := <-pe.q
 		if m == nil {
@@ -80,6 +78,7 @@ func (p *pub) sender() {
 
 		case m := <-sq:
 
+			// copy message to each endpoints
 			p.Lock()
 			for _, peer := range p.eps {
 				m := m.Dup()
