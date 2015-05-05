@@ -9,7 +9,7 @@ import (
 // socket is the meaty part of the core information.
 type socket struct {
 	proto      Protocol
-	transports map[string]Transport // key is transport scheme
+	transports map[string]Transport
 
 	sync.Mutex
 
@@ -502,6 +502,7 @@ func (this *dialer) Address() string {
 }
 
 // dialing is used to dial or redial from a goroutine.
+// TODO OptionMaxRetry?
 func (this *dialer) dialing() {
 	rtime := this.sock.redialTime
 	for {
