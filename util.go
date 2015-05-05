@@ -55,21 +55,6 @@ func DrainChannel(ch chan<- *Message, expire time.Time) bool {
 	}
 }
 
-func ProtocolName(number uint16) string {
-	names := map[uint16]string{
-		ProtoPair:       "pair",
-		ProtoPub:        "pub",
-		ProtoSub:        "sub",
-		ProtoReq:        "req",
-		ProtoRep:        "rep",
-		ProtoPush:       "push",
-		ProtoPull:       "pull",
-		ProtoSurveyor:   "surveyor",
-		ProtoRespondent: "respondent",
-		ProtoBus:        "bus"}
-	return names[number]
-}
-
 // ValidPeers returns true if the two sockets are capable of
 // peering to one another.  For example, REQ can peer with REP,
 // but not with BUS.
