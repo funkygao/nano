@@ -7,8 +7,14 @@ TODO
 - [X] bufio
 - [ ] sync.Pool and bytes.Buffer
 - [ ] big size msg
-- [ ] demo Device usage
+- [X] demo Device usage
+   
+  examples/pipeline
 - [ ] msg copy between transports
-- [ ] inproc tranport req-rep panic
 - [ ] Asynchronous DNS queries
 - [ ] zero copy
+
+
+### Bugs
+
+- [ ] inproc tranport req-rep panic
