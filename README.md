@@ -65,7 +65,7 @@ The protocol header is 8 bytes long
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 
-#### Message
+#### Message Frame
 
       uint64           []byte
     +------------+-----------------+
