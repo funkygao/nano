@@ -14,7 +14,3 @@ TODO
 - [ ] Asynchronous DNS queries
 - [ ] zero copy
 
-
-### Bugs
-
-- [ ] inproc tranport req-rep panic
