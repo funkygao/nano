@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	Debug = true
+	Debug = false
 )
 
 func Debugf(format string, args ...interface{}) {

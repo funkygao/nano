@@ -7,7 +7,6 @@ import (
 )
 
 type tcpTransport struct {
-	localAddr net.Addr // TODO deprecated, not in use
 }
 
 func (this *tcpTransport) Scheme() string {
@@ -19,6 +18,7 @@ func (this *tcpTransport) NewDialer(addr string, proto nano.Protocol) (nano.Pipe
 	if addr, err = nano.StripScheme(this, addr); err != nil {
 		return nil, err
 	}
+
 	d := &dialer{proto: proto, opts: newOptions()}
 	if d.addr, err = net.ResolveTCPAddr("tcp", addr); err != nil {
 		return nil, err
@@ -33,6 +33,7 @@ func (this *tcpTransport) NewListener(addr string, proto nano.Protocol) (nano.Pi
 	if addr, err = nano.StripScheme(this, addr); err != nil {
 		return nil, err
 	}
+
 	l := &listener{proto: proto, opts: newOptions()}
 	if l.addr, err = net.ResolveTCPAddr("tcp", addr); err != nil {
 		return nil, err

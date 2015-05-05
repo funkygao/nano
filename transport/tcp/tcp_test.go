@@ -6,13 +6,12 @@ import (
 	"time"
 
 	"github.com/funkygao/nano"
-	"github.com/funkygao/nano/protocol/rep"
-	"github.com/funkygao/nano/protocol/req"
+	"github.com/funkygao/nano/protocol/reqrep"
 )
 
 var tran = NewTransport()
-var protoRep = rep.NewProtocol()
-var protoReq = req.NewProtocol()
+var protoRep = reqrep.NewReqSocket().GetProtocol()
+var protoReq = reqrep.NewRepSocket().GetProtocol()
 
 func TestTCPListenAndAccept(t *testing.T) {
 	addr := "tcp://127.0.0.1:3333"

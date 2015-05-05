@@ -17,6 +17,8 @@ func mkTimer(deadline time.Duration) <-chan time.Time {
 	return time.After(deadline)
 }
 
+// StripScheme strip the addr prefix of the transport scheme.
+// e,g. tcp://1.1.1.1:100 will be stripped to 1.1.1.1:100.
 func StripScheme(t Transport, addr string) (string, error) {
 	s := t.Scheme() + "://"
 	if !strings.HasPrefix(addr, s) {
