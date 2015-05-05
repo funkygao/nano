@@ -19,10 +19,11 @@ type socket struct {
 	recvChanSize int
 	closeChan    chan struct{} // closed when user requests close
 
-	closing bool  // true if Socket was closed at API level
-	active  bool  // true if either Dial or Listen has been successfully called
-	recverr error // error to return on attempts to Recv()
-	senderr error // error to return on attempts to Send()
+	closing bool // true if Socket was closed at API level
+	active  bool // true if either Dial or Listen has been successfully called
+
+	recvErr error // error to return on attempts to Recv()
+	sendErr error // error to return on attempts to Send()
 
 	readDeadline  time.Duration // read deadline, default 0
 	writeDeadline time.Duration // write deadline, default 0
@@ -30,12 +31,12 @@ type socket struct {
 	redialMax     time.Duration // max reconnect interval before give up? TODO SetOption
 	linger        time.Duration // wait up to that time for sockets to drain
 
-	pipes []*pipeEndpoint
+	pipes []*pipeEndpoint // TODO rename eps []Endpoint
 
-	sendhook ProtocolSendHook
-	recvhook ProtocolRecvHook
+	sendHook ProtocolSendHook
+	recvHook ProtocolRecvHook
 
-	porthook PortHook
+	portHook PortHook
 }
 
 // MakeSocket is intended for use by Protocol implementations.  The intention
@@ -43,48 +44,52 @@ type socket struct {
 func MakeSocket(proto Protocol) Socket {
 	Debugf("proto: %v", proto.Name())
 	sock := &socket{
-		proto:        proto,
+		proto:      proto,
+		transports: make(map[string]Transport, 1),
+
 		sendChanSize: defaultChanLen,
+		sendChan:     make(chan *Message, defaultChanLen), // 128
 		recvChanSize: defaultChanLen,
-		sendChan:     make(chan *Message, defaultChanLen),
-		recvChan:     make(chan *Message, defaultChanLen),
+		recvChan:     make(chan *Message, defaultChanLen), // 128
 		closeChan:    make(chan struct{}),
-		redialTime:   defaultRedialTime,
-		redialMax:    defaultRedialMax,
-		linger:       defaultLingerTime,
-		transports:   make(map[string]Transport, 1),
-		pipes:        make([]*pipeEndpoint, 0),
+
+		redialTime: defaultRedialTime, // 100ms, backoff with double redial time
+		redialMax:  defaultRedialMax,  // 1m
+		linger:     defaultLingerTime, // 1s
+
+		pipes: make([]*pipeEndpoint, 0), // TODO
 	}
 
-	// Add some conditionals now -- saves checks later
 	if hook, ok := proto.(ProtocolRecvHook); ok {
-		sock.recvhook = hook
+		sock.recvHook = hook
 	}
 	if hook, ok := proto.(ProtocolSendHook); ok {
-		sock.sendhook = hook
+		sock.sendHook = hook
 	}
 
-	Debugf("sock:%+v, proto.Init(sock)...", *sock)
+	Debugf("sock:%+v", *sock)
 
+	// let protocol plugin initialize
 	proto.Init(sock)
 
 	return sock
 }
 
-func (sock *socket) getTransport(addr string) Transport {
-	sock.Lock()
-	defer sock.Unlock()
-
+func (sock *socket) getTransport(addr string) (Transport, error) {
 	var i int
 	if i = strings.Index(addr, "://"); i < 0 {
-		return nil
+		return nil, ErrBadTran
 	}
+
 	scheme := addr[:i]
+	sock.Lock()
+	defer sock.Unlock()
 	t, ok := sock.transports[scheme]
 	if t != nil && ok {
-		return t
+		return t, nil
 	}
-	return nil
+
+	return nil, ErrBadTran
 }
 
 func (sock *socket) AddTransport(t Transport) {
@@ -106,14 +111,14 @@ func (sock *socket) CloseChannel() <-chan struct{} {
 }
 
 func (sock *socket) SetSendError(err error) {
-	sock.Lock() // TODO this lock is required?
-	sock.senderr = err
+	sock.Lock() // sync with SendMsg
+	sock.sendErr = err
 	sock.Unlock()
 }
 
 func (sock *socket) SetRecvError(err error) {
-	sock.Lock() // TODO
-	sock.recverr = err
+	sock.Lock() // sync with RecvMsg
+	sock.recvErr = err
 	sock.Unlock()
 }
 
@@ -150,7 +155,7 @@ func (sock *socket) Close() error {
 
 func (sock *socket) SendMsg(msg *Message) error {
 	sock.Lock()
-	err := sock.senderr // copy err
+	err := sock.sendErr // copy err
 	sock.Unlock()
 	if err != nil {
 		return err
@@ -158,10 +163,10 @@ func (sock *socket) SendMsg(msg *Message) error {
 
 	Debugf("msg: %+v", *msg)
 
-	if sock.sendhook != nil {
-		Debugf("SendHook: %+v", *msg)
-		if ok := sock.sendhook.SendHook(msg); !ok {
-			// just drop it silently TODO ErrSendHook?
+	if sock.sendHook != nil {
+		Debugf("sendHook: %+v", *msg)
+		if ok := sock.sendHook.SendHook(msg); !ok {
+			// just drop it silently TODO ErrsendHook?
 			msg.Free()
 			return nil
 		}
@@ -182,7 +187,7 @@ func (sock *socket) SendMsg(msg *Message) error {
 
 func (sock *socket) RecvMsg() (*Message, error) {
 	sock.Lock()
-	e := sock.recverr
+	e := sock.recvErr
 	sock.Unlock()
 	if e != nil {
 		return nil, e
@@ -197,9 +202,9 @@ func (sock *socket) RecvMsg() (*Message, error) {
 		case msg = <-sock.recvChan:
 			Debugf("recv msg: %+v", *msg)
 
-			if sock.recvhook != nil {
+			if sock.recvHook != nil {
 				Debugf("RecvHook: %+v", *msg)
-				if ok := sock.recvhook.RecvHook(msg); ok {
+				if ok := sock.recvHook.RecvHook(msg); ok {
 					return msg, nil
 				} // else loop
 				msg.Free()
@@ -244,9 +249,9 @@ func (sock *socket) Dial(addr string) error {
 }
 
 func (sock *socket) NewDialer(addr string, options map[string]interface{}) (Dialer, error) {
-	t := sock.getTransport(addr)
-	if t == nil {
-		return nil, ErrBadTran
+	t, e := sock.getTransport(addr)
+	if e != nil {
+		return nil, e
 	}
 
 	d := &dialer{
@@ -293,9 +298,9 @@ func (sock *socket) NewListener(addr string, options map[string]interface{}) (Li
 	// connections.  The Listener just needs to listen continuously,
 	// as we assume that we want to continue to receive inbound
 	// connections without limit.
-	t := sock.getTransport(addr)
-	if t == nil {
-		return nil, ErrBadTran
+	t, e := sock.getTransport(addr)
+	if e != nil {
+		return nil, e
 	}
 
 	l := &listener{
@@ -341,8 +346,10 @@ func (sock *socket) SetOption(name string, value interface{}) error {
 		return nil
 	case OptionWriteQLen:
 		if sock.active {
+			// will lose data, so forbidden
 			return ErrBadOption
 		}
+
 		length := value.(int)
 		if length < 0 {
 			return ErrBadValue
@@ -352,8 +359,10 @@ func (sock *socket) SetOption(name string, value interface{}) error {
 		return nil
 	case OptionReadQLen:
 		if sock.active {
+			// will lose data, so forbidden
 			return ErrBadOption
 		}
+
 		length := value.(int)
 		if length < 0 {
 			return ErrBadValue
@@ -401,8 +410,8 @@ func (sock *socket) GetProtocol() Protocol {
 
 func (sock *socket) SetPortHook(newhook PortHook) PortHook {
 	sock.Lock()
-	oldhook := sock.porthook
-	sock.porthook = newhook
+	oldhook := sock.portHook
+	sock.portHook = newhook
 	sock.Unlock()
 	return oldhook
 }
@@ -412,7 +421,7 @@ func (sock *socket) addPipe(connPipe Pipe, d *dialer, l *listener) *pipeEndpoint
 	Debugf("d:%+v, l:%+v", d, l)
 
 	sock.Lock()
-	if fn := sock.porthook; fn != nil {
+	if fn := sock.portHook; fn != nil {
 		sock.Unlock()
 		if !fn(PortActionAdd, pe) {
 			pe.Close()

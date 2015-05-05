@@ -64,7 +64,7 @@ func (this *pipeEndpoint) Close() error {
 	this.Lock()
 	sock := this.sock
 	if sock != nil {
-		hook = sock.porthook
+		hook = sock.portHook
 	}
 	if this.closing {
 		this.Unlock()

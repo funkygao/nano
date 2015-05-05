@@ -5,6 +5,8 @@ import (
 )
 
 const (
+	defaultMaxMsgSize = 1 << 20
+
 	// defaultChanLen is the default length of the read/write memory channel.
 	defaultChanLen = 128
 

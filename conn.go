@@ -8,11 +8,9 @@ import (
 	"sync"
 )
 
-// connPipe implements the Pipe interface on top of net.Conn.  The
-// assumption is that transports using this have similar wire protocols,
-// and connPipe is meant to be used as a building block.
+// connPipe implements the Pipe interface on top of net.Conn.
 type connPipe struct {
-	c      net.Conn
+	conn   net.Conn
 	rlock  sync.Mutex
 	wlock  sync.Mutex
 	reader *bufio.Reader
@@ -27,17 +25,17 @@ type connPipe struct {
 // only returning the Pipe once the SP layer negotiation is complete.
 //
 // Stream oriented transports can utilize this to implement a Transport.
-func NewConnPipe(c net.Conn, proto Protocol, props ...interface{}) (Pipe, error) {
+func NewConnPipe(conn net.Conn, proto Protocol, props ...interface{}) (Pipe, error) {
 	this := &connPipe{
-		c:      c,
-		reader: bufio.NewReaderSize(c, defaultBufferSize),
-		writer: bufio.NewWriterSize(c, defaultBufferSize),
+		conn:   conn,
+		reader: bufio.NewReaderSize(conn, defaultBufferSize),
+		writer: bufio.NewWriterSize(conn, defaultBufferSize),
 		proto:  proto,
 		props:  make(map[string]interface{}),
 	}
 
-	this.props[PropLocalAddr] = c.LocalAddr()
-	this.props[PropRemoteAddr] = c.RemoteAddr()
+	this.props[PropLocalAddr] = conn.LocalAddr()
+	this.props[PropRemoteAddr] = conn.RemoteAddr()
 	if len(props)%2 != 0 {
 		return nil, ErrBadOption
 	}
@@ -69,28 +67,28 @@ func (this *connPipe) handshake() error {
 
 	var err error
 	var header = connHeader{S: 'S', P: 'P', Proto: this.proto.Number()}
-	if err = binary.Write(this.c, binary.BigEndian, &header); err != nil {
+	if err = binary.Write(this.conn, binary.BigEndian, &header); err != nil {
 		return err
 	}
 	Debugf("send header: %v", header)
 
-	if err = binary.Read(this.c, binary.BigEndian, &header); err != nil {
-		this.c.Close()
+	if err = binary.Read(this.conn, binary.BigEndian, &header); err != nil {
+		this.conn.Close()
 		return err
 	}
 	if header.Zero != 0 || header.S != 'S' || header.P != 'P' || header.Rsvd != 0 {
-		this.c.Close()
+		this.conn.Close()
 		return ErrBadHeader
 	}
 	// The only version number we support at present is "0"
 	if header.Version != 0 {
-		this.c.Close()
+		this.conn.Close()
 		return ErrBadVersion
 	}
 
 	// The protocol number lives as 16-bits (big-endian)
 	if header.Proto != this.proto.PeerNumber() {
-		this.c.Close()
+		this.conn.Close()
 		return ErrBadProto
 	}
 
@@ -122,8 +120,8 @@ func (this *connPipe) RecvMsg() (*Message, error) {
 	// a buffer.  But for protocols that only use small messages
 	// this can actually be more efficient since we don't allocate
 	// any more space than our peer says we need to.
-	if sz > 1024*1024 || sz < 0 {
-		this.c.Close()
+	if sz > defaultMaxMsgSize || sz < 0 {
+		this.conn.Close()
 		this.rlock.Unlock()
 		return nil, ErrTooLong
 	}
@@ -193,7 +191,7 @@ func (this *connPipe) RemoteProtocol() uint16 {
 // Close implements the Pipe Close method.
 func (this *connPipe) Close() error {
 	this.open = false
-	return this.c.Close()
+	return this.conn.Close()
 }
 
 // IsOpen implements the PipeIsOpen method.
@@ -216,17 +214,17 @@ type connPipeIpc struct {
 }
 
 // NewConnPipeIPC allocates a new Pipe using the IPC exchange protocol.
-func NewConnPipeIPC(c net.Conn, proto Protocol, props ...interface{}) (Pipe, error) {
+func NewConnPipeIPC(conn net.Conn, proto Protocol, props ...interface{}) (Pipe, error) {
 	this := &connPipeIpc{connPipe: connPipe{
-		c:      c,
-		reader: bufio.NewReaderSize(c, defaultBufferSize),
-		writer: bufio.NewWriterSize(c, defaultBufferSize),
+		conn:   conn,
+		reader: bufio.NewReaderSize(conn, defaultBufferSize),
+		writer: bufio.NewWriterSize(conn, defaultBufferSize),
 		proto:  proto,
 		props:  make(map[string]interface{}),
 	}}
 
-	this.props[PropLocalAddr] = c.LocalAddr()
-	this.props[PropRemoteAddr] = c.RemoteAddr()
+	this.props[PropLocalAddr] = conn.LocalAddr()
+	this.props[PropRemoteAddr] = conn.RemoteAddr()
 	if len(props)%2 != 0 {
 		return nil, ErrBadOption
 	}
@@ -300,8 +298,8 @@ func (this *connPipeIpc) RecvMsg() (*Message, error) {
 	}
 
 	// TODO
-	if sz > 1024*1024 || sz < 0 {
-		this.c.Close()
+	if sz > defaultMaxMsgSize || sz < 0 {
+		this.conn.Close()
 		this.rlock.Unlock()
 		return nil, ErrTooLong
 	}
