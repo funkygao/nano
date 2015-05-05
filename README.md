@@ -3,10 +3,13 @@ nano
 
 nano is an implementation in pure Go of the SP ("Scalable Protocols") protocols.
 
-Actually, behind the scenes, it does a lot. 
+The reference implementation of the SP protocols is available as:
+[nanomsg](http://www.nanomsg.org)
+
+nano is easy to use, but behind the scenes, it does a lot:
 
 - It frames messages. 
-- It sends and receives them in an asynchronous non-blocking manner. 
+- It sends and receives messages in an asynchronous non-blocking manner. 
 - It checks for connection failures and re-establishes connections as needed. 
 - It queues the messages if the peer is unavailable at the moment. 
 - It ensures that individual peers are assigned their fair share of server resources so that a single client can't hijack the server. 
