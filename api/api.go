@@ -10,11 +10,16 @@ type PubSocket struct {
 
 func NewPubSocket() (*PubSocket, error) {
 	s, err := NewSocket(AF_SP, PUB)
-	return &PubSocket{s}, err
+	return &PubSocket{Socket: s}, err
 }
 
 type SubSocket struct {
 	*Socket
+}
+
+func NewSubSocket() (*SubSocket, error) {
+	s, err := NewSocket(AF_SP, SUB)
+	return &SubSocket{Socket: s}, err
 }
 
 func (this *SubSocket) Subscribe(topic string) error {
