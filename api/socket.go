@@ -42,6 +42,7 @@ type Socket struct {
 	domain   Domain
 }
 
+// TODO getsockopt/setsockopt: sendbuf, nodelay, keepalive, etc
 func NewSocket(d Domain, p Protocol) (*Socket, error) {
 	var err error
 	sock := &Socket{protocol: p, domain: d}
@@ -92,9 +93,28 @@ func (this *Socket) Connect(addr string) error {
 }
 
 func (this *Socket) Recv() ([]byte, error) {
-	return nil, nil
+	msg, err := this.sock.RecvMsg()
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO mem copy overhead
+	var b []byte
+	if this.domain == AF_SP_RAW {
+		b = make([]byte, 0, len(msg.Header)+len(msg.Body))
+		copy(b, msg.Header)
+		b = append(b, msg.Body...)
+	} else {
+		b = make([]byte, len(msg.Body))
+		copy(b, msg.Body)
+	}
+	msg.Free()
+	return b, nil
 }
 
 func (this *Socket) Send(b []byte, flags int) (int, error) {
+	msg := nano.NewMessage(len(b))
+	msg.Body = append(msg.Body, b...)
+	return len(b), this.sock.SendMsg(msg)
 	return 0, nil
 }
