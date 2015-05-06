@@ -6,7 +6,8 @@ import (
 
 // dialer implements the Dailer interface.
 type dialer struct {
-	d         PipeDialer // created by Transport
+	d PipeDialer // created by Transport
+
 	sock      *socket
 	addr      string // remote server addr
 	closed    bool
@@ -20,9 +21,10 @@ func (this *dialer) Dial() error {
 		return ErrAddrInUse
 	}
 
-	this.closeChan = make(chan struct{})
 	this.sock.active = true
 	this.sock.Unlock()
+
+	this.closeChan = make(chan struct{})
 
 	Debugf("sock is active, go dialing...")
 
@@ -32,6 +34,56 @@ func (this *dialer) Dial() error {
 	return nil
 }
 
+// dialing is used to dial or redial from a goroutine.
+// TODO OptionMaxRetry?
+func (this *dialer) dialing() {
+	retry := this.sock.redialTime
+	for {
+		connPipe, err := this.d.Dial()
+		if err == nil {
+			// reset retry time
+			retry = this.sock.redialTime
+
+			this.sock.Lock()
+			if this.closed {
+				this.sock.Unlock()
+				connPipe.Close()
+				return
+			}
+			this.sock.Unlock()
+
+			// add the new endpoint
+			cp := this.sock.addPipe(connPipe, this, nil)
+			// sleep till pipe broken, and then redial
+			select {
+			case <-cp.closeChan:
+			case <-this.sock.closeChan:
+			case <-this.closeChan:
+			}
+		} else {
+			// dial error
+			Debugf("%v", err)
+		}
+
+		// we're redialing here
+		select {
+		case <-this.closeChan: // dialer closed
+			return
+
+		case <-this.sock.closeChan: // exit if parent socket closed
+			return
+
+		case <-time.After(retry):
+			retry *= 2
+			if retry > this.sock.redialMax {
+				retry = this.sock.redialMax
+			}
+			Debugf("%s", retry)
+			continue
+		}
+	}
+}
+
 func (this *dialer) Close() error {
 	this.sock.Lock()
 	if this.closed {
@@ -39,11 +91,12 @@ func (this *dialer) Close() error {
 		return ErrClosed
 	}
 
+	this.closed = true
+	this.sock.Unlock()
+
 	Debugf("dialer closed")
 
-	this.closed = true
 	close(this.closeChan)
-	this.sock.Unlock()
 	return nil
 }
 
@@ -57,49 +110,4 @@ func (this *dialer) SetOption(name string, val interface{}) error {
 
 func (this *dialer) Address() string {
 	return this.addr
-}
-
-// dialing is used to dial or redial from a goroutine.
-// TODO OptionMaxRetry?
-func (this *dialer) dialing() {
-	rtime := this.sock.redialTime
-	for {
-		connPipe, err := this.d.Dial()
-		if err == nil {
-			// reset retry time
-			rtime = this.sock.redialTime
-
-			this.sock.Lock()
-			if this.closed {
-				this.sock.Unlock()
-				connPipe.Close()
-				return
-			}
-			this.sock.Unlock()
-
-			if cp := this.sock.addPipe(connPipe, this, nil); cp != nil {
-				// sleep till pipe broken, and then redial
-				select {
-				case <-this.sock.closeChan: // parent socket closed
-				case <-cp.closeChan: // disconnect event
-				case <-this.closeChan: // dialer closed
-				}
-			}
-		}
-
-		// we're redialing here
-		select {
-		case <-this.closeChan: // dialer closed
-			return
-		case <-this.sock.closeChan: // exit if parent socket closed
-			return
-		case <-time.After(rtime):
-			rtime *= 2
-			if rtime > this.sock.redialMax {
-				rtime = this.sock.redialMax
-			}
-			Debugf("%s", rtime)
-			continue
-		}
-	}
 }
