@@ -59,6 +59,7 @@ func (this *pair) sender(endpoint nano.Endpoint) {
 		select {
 		case msg := <-sendChan:
 			if err := endpoint.SendMsg(msg); err != nil {
+				nano.Debugf("%v", err)
 				msg.Free()
 				return
 			}
@@ -81,6 +82,7 @@ func (this *pair) receiver(endpoint nano.Endpoint) {
 
 		select {
 		case recvChan <- msg:
+
 		case <-closeChan:
 			return
 		}

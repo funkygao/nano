@@ -35,7 +35,6 @@ type dialer struct {
 
 // Dial implements the PipeDialer Dial method
 func (d *dialer) Dial() (nano.Pipe, error) {
-
 	conn, err := net.DialUnix("unix", nil, d.addr)
 	if err != nil {
 		return nil, err
@@ -72,7 +71,6 @@ func (l *listener) Listen() error {
 
 // Accept implements the the PipeListener Accept method.
 func (l *listener) Accept() (nano.Pipe, error) {
-
 	conn, err := l.listener.AcceptUnix()
 	if err != nil {
 		return nil, err

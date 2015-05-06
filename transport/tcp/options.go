@@ -37,7 +37,6 @@ func (o options) set(name string, val interface{}) error {
 }
 
 func (o options) configTCP(conn *net.TCPConn) error {
-	nano.Debugf("tcp nodelay")
 	if v, ok := o[nano.OptionNoDelay]; ok {
 		if err := conn.SetNoDelay(v.(bool)); err != nil {
 			return err

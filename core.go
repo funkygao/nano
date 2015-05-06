@@ -75,6 +75,94 @@ func MakeSocket(proto Protocol) Socket {
 	return sock
 }
 
+func (sock *socket) DialOptions(addr string, options map[string]interface{}) error {
+	d, err := sock.NewDialer(addr, options)
+	if err != nil {
+		return err
+	}
+
+	Debugf("addr:%s, opt:%v, dialing...", addr, options)
+
+	return d.Dial()
+}
+
+func (sock *socket) Dial(addr string) error {
+	return sock.DialOptions(addr, nil)
+}
+
+func (sock *socket) NewDialer(addr string, options map[string]interface{}) (Dialer, error) {
+	t, e := sock.getTransport(addr)
+	if e != nil {
+		return nil, e
+	}
+
+	var (
+		err error
+		d   = &dialer{
+			sock: sock,
+			addr: addr,
+		}
+	)
+	if d.d, err = t.NewDialer(addr, sock.proto); err != nil {
+		return nil, err
+	}
+
+	for n, v := range options {
+		if err = d.d.SetOption(n, v); err != nil {
+			return nil, err
+		}
+	}
+
+	return d, nil
+}
+
+func (sock *socket) ListenOptions(addr string, options map[string]interface{}) error {
+	l, err := sock.NewListener(addr, options)
+	if err != nil {
+		return err
+	}
+
+	Debugf("addr:%s, opt:%v, listen...", addr, options)
+
+	return l.Listen()
+}
+
+func (sock *socket) Listen(addr string) error {
+	return sock.ListenOptions(addr, nil)
+}
+
+// NewListener wraps PipeListener created in Transport.
+func (sock *socket) NewListener(addr string, options map[string]interface{}) (Listener, error) {
+	// This function sets up a goroutine to accept inbound connections.
+	// The accepted connection will be added to a list of accepted
+	// connections.  The Listener just needs to listen continuously,
+	// as we assume that we want to continue to receive inbound
+	// connections without limit.
+	t, e := sock.getTransport(addr)
+	if e != nil {
+		return nil, e
+	}
+
+	l := &listener{
+		sock: sock,
+		addr: addr,
+	}
+	var err error
+	l.l, err = t.NewListener(addr, sock.proto)
+	if err != nil {
+		return nil, err
+	}
+
+	for n, v := range options {
+		if err = l.l.SetOption(n, v); err != nil {
+			l.l.Close()
+			return nil, err
+		}
+	}
+
+	return l, nil
+}
+
 func (sock *socket) getTransport(addr string) (Transport, error) {
 	var i int
 	if i = strings.Index(addr, "://"); i < 0 {
@@ -82,10 +170,10 @@ func (sock *socket) getTransport(addr string) (Transport, error) {
 	}
 
 	scheme := addr[:i]
-	sock.Lock()
-	defer sock.Unlock()
-	t, ok := sock.transports[scheme]
-	if t != nil && ok {
+	sock.RLock()
+	t, present := sock.transports[scheme]
+	sock.RUnlock()
+	if present {
 		return t, nil
 	}
 
@@ -240,98 +328,6 @@ func (sock *socket) Recv() ([]byte, error) {
 	return msg.Body, nil // FIXME when to msg.Free?
 }
 
-func (sock *socket) DialOptions(addr string, options map[string]interface{}) error {
-	d, err := sock.NewDialer(addr, options)
-	if err != nil {
-		return err
-	}
-
-	Debugf("addr:%s, opt:%v, dialing...", addr, options)
-
-	return d.Dial()
-}
-
-func (sock *socket) Dial(addr string) error {
-	return sock.DialOptions(addr, nil)
-}
-
-func (sock *socket) NewDialer(addr string, options map[string]interface{}) (Dialer, error) {
-	t, e := sock.getTransport(addr)
-	if e != nil {
-		return nil, e
-	}
-
-	var (
-		d = &dialer{
-			sock:      sock,
-			addr:      addr,
-			closeChan: make(chan struct{}),
-		}
-		err error
-	)
-	if d.d, err = t.NewDialer(addr, sock.proto); err != nil {
-		return nil, err
-	}
-
-	for n, v := range options {
-		if err = d.d.SetOption(n, v); err != nil {
-			return nil, err
-		}
-	}
-
-	return d, nil
-}
-
-func (sock *socket) ListenOptions(addr string, options map[string]interface{}) error {
-	l, err := sock.NewListener(addr, options)
-	if err != nil {
-		return err
-	}
-
-	Debugf("addr:%s, opt:%v, listen...", addr, options)
-
-	if err = l.Listen(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (sock *socket) Listen(addr string) error {
-	return sock.ListenOptions(addr, nil)
-}
-
-// NewListener wraps  PipeListener created in Transport.
-func (sock *socket) NewListener(addr string, options map[string]interface{}) (Listener, error) {
-	// This function sets up a goroutine to accept inbound connections.
-	// The accepted connection will be added to a list of accepted
-	// connections.  The Listener just needs to listen continuously,
-	// as we assume that we want to continue to receive inbound
-	// connections without limit.
-	t, e := sock.getTransport(addr)
-	if e != nil {
-		return nil, e
-	}
-
-	l := &listener{
-		sock: sock,
-		addr: addr,
-	}
-	var err error
-	l.l, err = t.NewListener(addr, sock.proto)
-	if err != nil {
-		return nil, err
-	}
-
-	for n, v := range options {
-		if err = l.l.SetOption(n, v); err != nil {
-			l.l.Close()
-			return nil, err
-		}
-	}
-
-	return l, nil
-}
-
 func (sock *socket) SetOption(name string, value interface{}) error {
 	matched := false
 	err := sock.proto.SetOption(name, value)
@@ -347,12 +343,15 @@ func (sock *socket) SetOption(name string, value interface{}) error {
 	case OptionRecvDeadline:
 		sock.readDeadline = value.(time.Duration)
 		return nil
+
 	case OptionSendDeadline:
 		sock.writeDeadline = value.(time.Duration)
 		return nil
+
 	case OptionLinger:
 		sock.linger = value.(time.Duration)
 		return nil
+
 	case OptionWriteQLen:
 		if sock.active {
 			// will lose data, so forbidden
@@ -366,6 +365,7 @@ func (sock *socket) SetOption(name string, value interface{}) error {
 		sock.sendChanSize = length
 		sock.sendChan = make(chan *Message, sock.sendChanSize)
 		return nil
+
 	case OptionReadQLen:
 		if sock.active {
 			// will lose data, so forbidden
@@ -401,12 +401,16 @@ func (sock *socket) GetOption(name string) (interface{}, error) {
 	switch name {
 	case OptionRecvDeadline:
 		return sock.readDeadline, nil
+
 	case OptionSendDeadline:
 		return sock.writeDeadline, nil
+
 	case OptionLinger:
 		return sock.linger, nil
+
 	case OptionWriteQLen:
 		return sock.sendChanSize, nil
+
 	case OptionReadQLen:
 		return sock.recvChanSize, nil
 	}
@@ -462,178 +466,4 @@ func (sock *socket) removePipe(p *pipeEndpoint) {
 		p.index = -1
 	}
 	sock.Unlock()
-}
-
-// dialer implements the Dailer interface.
-type dialer struct {
-	d         PipeDialer // created by Transport
-	sock      *socket
-	addr      string // remote server addr
-	closed    bool
-	closeChan chan struct{}
-}
-
-func (this *dialer) Dial() error {
-	this.sock.Lock()
-	if this.sock.active {
-		this.sock.Unlock()
-		return ErrAddrInUse
-	}
-
-	this.closeChan = make(chan struct{})
-	this.sock.active = true
-	this.sock.Unlock()
-
-	Debugf("sock is active, go dialing...")
-
-	// keep dialing
-	go this.dialing()
-
-	return nil
-}
-
-func (this *dialer) Close() error {
-	this.sock.Lock()
-	if this.closed {
-		this.sock.Unlock()
-		return ErrClosed
-	}
-
-	Debugf("dialer closed")
-
-	this.closed = true
-	close(this.closeChan)
-	this.sock.Unlock()
-	return nil
-}
-
-func (this *dialer) GetOption(name string) (interface{}, error) {
-	return this.d.GetOption(name)
-}
-
-func (this *dialer) SetOption(name string, val interface{}) error {
-	return this.d.SetOption(name, val)
-}
-
-func (this *dialer) Address() string {
-	return this.addr
-}
-
-// dialing is used to dial or redial from a goroutine.
-// TODO OptionMaxRetry?
-func (this *dialer) dialing() {
-	rtime := this.sock.redialTime
-	for {
-		connPipe, err := this.d.Dial()
-		if err == nil {
-			// reset retry time
-			rtime = this.sock.redialTime
-
-			this.sock.Lock()
-			if this.closed {
-				this.sock.Unlock()
-				connPipe.Close()
-				return
-			}
-			this.sock.Unlock()
-
-			if cp := this.sock.addPipe(connPipe, this, nil); cp != nil {
-				// sleep till pipe broken, and then redial
-				select {
-				case <-this.sock.closeChan: // parent socket closed
-				case <-cp.closeChan: // disconnect event
-				case <-this.closeChan: // dialer closed
-				}
-			}
-		}
-
-		// we're redialing here
-		select {
-		case <-this.closeChan: // dialer closed
-			return
-		case <-this.sock.closeChan: // exit if parent socket closed
-			return
-		case <-time.After(rtime):
-			rtime *= 2
-			if rtime > this.sock.redialMax {
-				rtime = this.sock.redialMax
-			}
-			Debugf("%s", rtime)
-			continue
-		}
-	}
-}
-
-// listener implements the Listener interface.
-type listener struct {
-	l    PipeListener // created by Transport
-	sock *socket      // local bind addr
-	addr string
-}
-
-func (this *listener) GetOption(name string) (interface{}, error) {
-	return this.l.GetOption(name)
-}
-
-func (this *listener) SetOption(name string, val interface{}) error {
-	return this.l.SetOption(name, val)
-}
-
-func (this *listener) Listen() error {
-	this.sock.Lock()
-	if this.sock.active {
-		this.sock.Unlock()
-		return ErrAddrInUse
-	}
-
-	this.sock.active = true
-	this.sock.Unlock()
-
-	Debugf("sock is active")
-
-	if err := this.l.Listen(); err != nil {
-		return err
-	}
-
-	// keep serving connections
-	go this.serve()
-
-	return nil
-}
-
-func (this *listener) Address() string {
-	return this.addr
-}
-
-func (this *listener) Close() error {
-	return this.l.Close()
-}
-
-// serve spins in a loop, calling the accepter's Accept routine.
-func (l *listener) serve() {
-	Debugf("serve: %+v", *l)
-
-	for {
-		select {
-		case <-l.sock.closeChan:
-			return
-		default:
-		}
-
-		Debugf("waiting for %T Accept", l.l)
-		connPipe, err := l.l.Accept()
-		if err == nil {
-			Debugf("successfully accepting new conn, addPipe...")
-			l.sock.addPipe(connPipe, nil, l)
-		} else {
-			// If the underlying PipeListener is closed, or not
-			// listening, we expect to return back with an error.
-			if err == ErrClosed {
-				return
-			} else {
-				// TODO
-			}
-		}
-
-	}
 }

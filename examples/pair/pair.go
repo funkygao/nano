@@ -91,6 +91,7 @@ func runClient(seq int) {
 	w.Wrap(func() {
 		const x = 10000
 		for i := 0; i < x; i++ {
+			log.Printf("sending msg: %5d", i+1)
 			if err := sock.Send(body); err != nil {
 				log.Println(err)
 				break
