@@ -22,50 +22,6 @@ func (this *pair) Init(sock nano.ProtocolSocket) {
 	this.waiter.Init()
 }
 
-func (this *pair) Shutdown(expire time.Time) {
-	this.waiter.WaitAbsTimeout(expire)
-}
-
-func (this *pair) sender(endpoint nano.Endpoint) {
-	defer this.waiter.Done()
-
-	sendChan := this.sock.SendChannel()
-	closeChan := this.sock.CloseChannel()
-
-	// This is pretty easy because we have only one peer at a time.
-	// If the peer goes away, we'll just drop the message on the floor.
-	for {
-		select {
-		case msg := <-sendChan:
-			if endpoint.SendMsg(msg) != nil {
-				msg.Free()
-				return
-			}
-
-		case <-closeChan:
-			return
-		}
-	}
-}
-
-func (x *pair) receiver(endpoint nano.Endpoint) {
-	recvChan := x.sock.RecvChannel()
-	closeChan := x.sock.CloseChannel()
-
-	for {
-		msg := endpoint.RecvMsg()
-		if msg == nil {
-			return
-		}
-
-		select {
-		case recvChan <- msg:
-		case <-closeChan:
-			return
-		}
-	}
-}
-
 func (this *pair) AddEndpoint(endpoint nano.Endpoint) {
 	this.Lock()
 	if this.peer != nil {
@@ -89,6 +45,50 @@ func (this *pair) RemoveEndpoint(endpoint nano.Endpoint) {
 		this.peer = nil
 	}
 	this.Unlock()
+}
+
+func (this *pair) sender(endpoint nano.Endpoint) {
+	defer this.waiter.Done()
+
+	sendChan := this.sock.SendChannel()
+	closeChan := this.sock.CloseChannel()
+
+	// This is pretty easy because we have only one peer at a time.
+	// If the peer goes away, we'll just drop the message on the floor.
+	for {
+		select {
+		case msg := <-sendChan:
+			if err := endpoint.SendMsg(msg); err != nil {
+				msg.Free()
+				return
+			}
+
+		case <-closeChan:
+			return
+		}
+	}
+}
+
+func (this *pair) receiver(endpoint nano.Endpoint) {
+	recvChan := this.sock.RecvChannel()
+	closeChan := this.sock.CloseChannel()
+
+	for {
+		msg := endpoint.RecvMsg()
+		if msg == nil {
+			return
+		}
+
+		select {
+		case recvChan <- msg:
+		case <-closeChan:
+			return
+		}
+	}
+}
+
+func (this *pair) Shutdown(expire time.Time) {
+	this.waiter.WaitAbsTimeout(expire)
 }
 
 func (*pair) Number() uint16 {
@@ -115,6 +115,7 @@ func (this *pair) SetOption(name string, val interface{}) error {
 			return nano.ErrBadValue
 		}
 		return nil
+
 	default:
 		return nano.ErrBadOption
 	}
@@ -124,6 +125,7 @@ func (this *pair) GetOption(name string) (interface{}, error) {
 	switch name {
 	case nano.OptionRaw:
 		return this.raw, nil
+
 	default:
 		return nil, nano.ErrBadOption
 	}
