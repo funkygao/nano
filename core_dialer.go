@@ -39,7 +39,7 @@ func (this *dialer) Dial() error {
 func (this *dialer) dialing() {
 	retry := this.sock.redialTime
 	for {
-		connPipe, err := this.d.Dial()
+		connPipe, err := this.d.Dial() // will handshake
 		if err == nil {
 			// reset retry time
 			retry = this.sock.redialTime

@@ -36,7 +36,7 @@ func (this *metricsRecv) Data() int {
 }
 
 func init() {
-	nano.Debug = false
+	nano.Debug = true
 }
 
 func usage() {

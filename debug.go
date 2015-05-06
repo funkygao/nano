@@ -4,13 +4,15 @@ import (
 	"fmt"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/funkygao/golib/color"
 )
 
 var (
-	Debug = false
+	Debug     = false
+	debugLock sync.Mutex
 )
 
 func Debugf(format string, args ...interface{}) {
@@ -30,9 +32,11 @@ func Debugf(format string, args ...interface{}) {
 		hour, min, sec := t.Clock()
 		nanosec := t.Nanosecond() / 1e3
 
+		debugLock.Lock()
 		fmt.Printf("DEBUG: [%d:%d:%d.%04d] %s:%d(%s): %s\n",
 			hour, min, sec, nanosec,
 			file, line, color.Red(fnparts[len(fnparts)-1]),
 			fmt.Sprintf(format, args...))
+		debugLock.Unlock()
 	}
 }

@@ -14,7 +14,8 @@ var pipes struct {
 // pipe wraps the Pipe data structure with the stuff we need to keep
 // for the core.  It implements the Endpoint interface.
 type pipeEndpoint struct {
-	pipe     Pipe // connPipe
+	pipe Pipe // connPipe
+
 	listener *listener
 	dialer   *dialer
 	sock     *socket

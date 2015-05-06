@@ -19,7 +19,7 @@ func Device(s1 Socket, s2 Socket) error {
 		return ErrClosed
 	}
 
-	// Is one of the sockets nil?
+	// Is one of the sockets nil? loopback
 	if s1 == nil {
 		s1 = s2
 	}
@@ -49,13 +49,13 @@ func Device(s1 Socket, s2 Socket) error {
 // The sockets must be of compatible types, and must be in Raw mode.
 func forwarder(fromSock Socket, toSock Socket) {
 	for {
-		m, err := fromSock.RecvMsg()
+		msg, err := fromSock.RecvMsg()
 		if err != nil {
 			// Probably closed socket, nothing else we can do.
 			return
 		}
 
-		err = toSock.SendMsg(m)
+		err = toSock.SendMsg(msg)
 		if err != nil {
 			return
 		}

@@ -42,7 +42,7 @@ func (l *listener) serve() {
 		default:
 		}
 
-		connPipe, err := l.l.Accept()
+		connPipe, err := l.l.Accept() // will handshake
 		if err == nil {
 			Debugf("accepted: %+v", connPipe)
 			l.sock.addPipe(connPipe, nil, l)

@@ -10,14 +10,17 @@ import (
 
 // connPipe implements the Pipe interface on top of net.Conn.
 type connPipe struct {
-	conn   net.Conn
-	rlock  sync.Mutex
-	wlock  sync.Mutex
+	conn net.Conn
+
+	rlock sync.Mutex
+	wlock sync.Mutex
+
 	reader *bufio.Reader
 	writer *bufio.Writer
-	proto  Protocol
-	open   bool // true after handshake
-	props  map[string]interface{}
+
+	proto Protocol
+	open  bool // true after handshake
+	props map[string]interface{}
 }
 
 // NewConnPipe allocates a new Pipe using the supplied net.Conn, and
@@ -54,7 +57,7 @@ func NewConnPipe(conn net.Conn, proto Protocol, props ...interface{}) (Pipe, err
 
 // handshake establishes an SP connection between peers.  Both sides must
 // send the header, then both sides must wait for the peer's header.
-// As a side effect, the peer's protocol number is stored in the conn.
+// As a side effect, the peer's protocol number is stored in the connPipe.
 func (this *connPipe) handshake() error {
 	type connHeader struct {
 		Zero    byte   // must be zero
@@ -76,29 +79,29 @@ func (this *connPipe) handshake() error {
 		this.conn.Close()
 		return err
 	}
+	Debugf("recv header: %v", header)
+
+	// validate the received header
 	if header.Zero != 0 || header.S != 'S' || header.P != 'P' || header.Rsvd != 0 {
 		this.conn.Close()
 		return ErrBadHeader
 	}
-	// The only version number we support at present is "0"
 	if header.Version != 0 {
+		// The only version number we support at present is "0"
 		this.conn.Close()
 		return ErrBadVersion
 	}
-
-	// The protocol number lives as 16-bits (big-endian)
 	if header.Proto != this.proto.PeerNumber() {
 		this.conn.Close()
 		return ErrBadProto
 	}
 
-	Debugf("recv header: %v", header)
 	this.open = true
 	return nil
 }
 
 // RecvMsg implements the Pipe RecvMsg method.  The message received is expected as
-// a 64-bit size (network byte order) followed by the message itself.
+// a 64-bit size (network byte order) followed by the message itself(frame).
 func (this *connPipe) RecvMsg() (*Message, error) {
 	var sz int64
 	var err error
@@ -107,6 +110,7 @@ func (this *connPipe) RecvMsg() (*Message, error) {
 	// prevent interleaved reads
 	this.rlock.Lock()
 
+	// read frame size
 	if err = binary.Read(this.reader, binary.BigEndian, &sz); err != nil {
 		this.rlock.Unlock()
 		return nil, err
@@ -114,12 +118,6 @@ func (this *connPipe) RecvMsg() (*Message, error) {
 
 	Debugf("sz: %d", sz)
 
-	// TODO: This fixed limit is kind of silly, but it keeps
-	// a bogus peer from causing us to try to allocate ridiculous
-	// amounts of memory.  If you don't like it, then prealloc
-	// a buffer.  But for protocols that only use small messages
-	// this can actually be more efficient since we don't allocate
-	// any more space than our peer says we need to.
 	if sz > defaultMaxMsgSize || sz < 0 {
 		this.conn.Close()
 		this.rlock.Unlock()
@@ -127,7 +125,8 @@ func (this *connPipe) RecvMsg() (*Message, error) {
 	}
 
 	msg = NewMessage(int(sz))
-	msg.Body = msg.Body[0:sz] // the msg may be pulled from message pool, so reset body
+	msg.Body = msg.Body[0:sz]
+	// read frame body
 	if _, err = io.ReadFull(this.reader, msg.Body); err != nil {
 		msg.Free()
 		this.rlock.Unlock()
@@ -149,12 +148,14 @@ func (this *connPipe) SendMsg(msg *Message) error {
 	// prevent interleaved writes
 	this.wlock.Lock()
 
+	// send frame size
 	if err := binary.Write(this.writer, binary.BigEndian, sz); err != nil {
 		this.wlock.Unlock()
 		msg.Free()
 		return err
 	}
 
+	// send frame body
 	if _, err := this.writer.Write(msg.Header); err != nil {
 		this.wlock.Unlock()
 		msg.Free()
