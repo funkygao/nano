@@ -31,7 +31,12 @@ type socket struct {
 	redialMax     time.Duration // max reconnect interval before give up? TODO SetOption
 	linger        time.Duration // wait up to that time for sockets to drain
 
-	pipes []*pipeEndpoint // TODO rename eps []Endpoint
+	// a socket can have multiple endpoints:
+	// a listener can accept multiple inbound connections(endpoints);
+	// a dialer can dial multiple servers(endpoints).
+	//
+	// we store pipes so that socket close will gracefully close all endpoints.
+	pipes []*pipeEndpoint
 
 	sendHook ProtocolSendHook // pipeline/reqrep/survey are hooking
 	recvHook ProtocolRecvHook // bus/reqrep/survey are hooking
@@ -460,6 +465,7 @@ func (sock *socket) removePipe(p *pipeEndpoint) {
 
 	sock.Lock()
 	if p.index >= 0 {
+		// switch between p and pipes slice last item
 		sock.pipes[p.index] = sock.pipes[len(sock.pipes)-1]
 		sock.pipes[p.index].index = p.index
 		sock.pipes = sock.pipes[:len(sock.pipes)-1]

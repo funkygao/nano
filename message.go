@@ -102,7 +102,7 @@ func NewMessage(sz int) *Message {
 	return msg
 }
 
-func monitorMessagePool() {
+func messagePoolWatchdog() {
 	if !Debug {
 		return
 	}

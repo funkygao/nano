@@ -1,14 +1,31 @@
 package nano
 
 import (
+	"math/rand"
 	"sync"
+	"time"
 )
 
-// TODO duplicated with socket.pipes
-var pipes struct {
-	byid   map[uint32]*pipeEndpoint
-	nextid uint32
+var endpointPool struct {
+	byid       map[uint32]*pipeEndpoint
+	nextidChan chan uint32
+
 	sync.Mutex
+}
+
+func endpointIdGenerator() {
+	var nextid = uint32(rand.NewSource(time.Now().UnixNano()).Int63())
+	var id uint32
+	for {
+		id = nextid & 0x7fffffff
+		nextid++
+		if id == 0 {
+			continue
+		}
+		Debugf("pipe id gen: %d", id)
+
+		endpointPool.nextidChan <- id
+	}
 }
 
 // pipe wraps the Pipe data structure with the stuff we need to keep
@@ -21,9 +38,9 @@ type pipeEndpoint struct {
 	sock     *socket
 
 	closing   bool          // true if we were closed
-	closeChan chan struct{} // only closed, never passes data
+	closeChan chan struct{} // TODO seems can be discarded
 	id        uint32
-	index     int // index in master list of pipes for socket
+	index     int
 
 	sync.Mutex
 }
@@ -37,39 +54,34 @@ func newPipeEndpoint(connPipe Pipe, d *dialer, l *listener) *pipeEndpoint {
 		closeChan: make(chan struct{}),
 	}
 	for {
-		pipes.Lock()
-		this.id = pipes.nextid & 0x7fffffff // TODO
-		pipes.nextid++
-		Debugf("pipe.id=%d nextid=%d", this.id, pipes.nextid)
-		if this.id != 0 && pipes.byid[this.id] == nil {
-			pipes.byid[this.id] = this
-			pipes.Unlock()
-			break
+		this.id = <-endpointPool.nextidChan
+
+		endpointPool.Lock()
+		if _, present := endpointPool.byid[this.id]; !present {
+			endpointPool.byid[this.id] = this
+			endpointPool.Unlock()
+			return this
 		}
-		pipes.Unlock()
+		endpointPool.Unlock()
 	}
 
-	Debugf("%+v", pipes)
 	return this
 }
 
 func (this *pipeEndpoint) Id() uint32 {
-	pipes.Lock()
-	id := this.id
-	pipes.Unlock()
-	return id
+	return this.id
 }
 
 func (this *pipeEndpoint) Close() error {
 	var hook PortHook
 	this.Lock()
+	if this.closing {
+		this.Unlock()
+		return nil // TODO ErrClosed?
+	}
 	sock := this.sock
 	if sock != nil {
 		hook = sock.portHook
-	}
-	if this.closing {
-		this.Unlock()
-		return nil
 	}
 	this.closing = true
 	this.Unlock()
@@ -80,16 +92,15 @@ func (this *pipeEndpoint) Close() error {
 	}
 	this.pipe.Close()
 
-	pipes.Lock()
-	delete(pipes.byid, this.id)
-	this.id = 0 // safety
-	pipes.Unlock()
+	endpointPool.Lock()
+	delete(endpointPool.byid, this.id)
+	endpointPool.Unlock()
 
 	if hook != nil {
 		hook(PortActionRemove, this)
 	}
 
-	Debugf("%+v", pipes)
+	Debugf("%+v", endpointPool)
 	return nil
 }
 
@@ -125,6 +136,7 @@ func (this *pipeEndpoint) Address() string {
 	switch {
 	case this.listener != nil:
 		return this.listener.Address()
+
 	case this.dialer != nil:
 		return this.dialer.Address()
 	}
