@@ -38,7 +38,7 @@ type pipeEndpoint struct {
 	sock     *socket
 
 	closing   bool          // true if we were closed
-	closeChan chan struct{} // TODO seems can be discarded
+	closeChan chan struct{} // notify dialer to redial
 	id        uint32
 	index     int
 
