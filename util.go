@@ -17,8 +17,7 @@ func mkTimer(deadline time.Duration) <-chan time.Time {
 	return time.After(deadline)
 }
 
-// StripScheme strip the addr prefix of the transport scheme.
-// e,g. tcp://1.1.1.1:100 will be stripped to 1.1.1.1:100.
+// StripScheme strips the transport scheme from addr.
 func StripScheme(t Transport, addr string) (string, error) {
 	s := t.Scheme() + "://"
 	if !strings.HasPrefix(addr, s) {
@@ -27,9 +26,10 @@ func StripScheme(t Transport, addr string) (string, error) {
 	return addr[len(s):], nil
 }
 
+// DrainChannel will wait till the channel become empty. If after
+// expire still not empty, return false.
 func DrainChannel(ch chan<- *Message, expire time.Time) bool {
 	var dur time.Duration = time.Millisecond * 10
-
 	for {
 		if len(ch) == 0 {
 			// all drained
@@ -40,6 +40,7 @@ func DrainChannel(ch chan<- *Message, expire time.Time) bool {
 		if now.After(expire) {
 			return false
 		}
+
 		// We sleep the lesser of the remaining time, or
 		// 10 milliseconds.  This polling is kind of suboptimal for
 		// draining, but its far far less complicated than trying to
@@ -76,6 +77,7 @@ func ValidPeers(p1, p2 Protocol) bool {
 func NullRecv(ep Endpoint) {
 	for {
 		if m := ep.RecvMsg(); m == nil {
+			// dropped connection
 			return
 		} else {
 			m.Free()

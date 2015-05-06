@@ -79,8 +79,8 @@ type Protocol interface {
 type ProtocolRecvHook interface {
 	// RecvHook is called just before the message is handed to the
 	// application.  The message may be modified.  If false is returned,
-	// then the message is dropped.
-	RecvHook(*Message) bool // TODO return error instead of bool
+	// then the message is silently dropped.
+	RecvHook(*Message) bool
 }
 
 // ProtocolSendHook is intended to be an additional extension
@@ -90,7 +90,7 @@ type ProtocolSendHook interface {
 	// If false is returned, the message will be silently dropped.
 	// Note that the message may be dropped for other reasons,
 	// such as if backpressure is applied.
-	SendHook(*Message) bool // TODO return error instead of bool
+	SendHook(*Message) bool
 }
 
 // ProtocolSocket is the "handle" given to protocols to interface with the

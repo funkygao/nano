@@ -8,7 +8,6 @@ var (
 	ErrBadAddr     = errors.New("invalid address")
 	ErrBadHeader   = errors.New("invalid header received")
 	ErrBadVersion  = errors.New("invalid protocol version")
-	ErrTooShort    = errors.New("message is too short")
 	ErrTooLong     = errors.New("message is too long")
 	ErrClosed      = errors.New("connection closed")
 	ErrConnRefused = errors.New("connection refused")

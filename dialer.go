@@ -8,17 +8,17 @@ type Dialer interface {
 	// Further operations on the Dialer will return ErrClosed.
 	Close() error
 
-	// Dial starts connecting on the address.  If a connection fails,
+	// Dial starts connecting to the address.  If a connection fails,
 	// it will restart.
 	Dial() error
 
-	// Address returns the string (full URL) of the Listener.
+	// Address returns the full URL of remote address.
 	Address() string
 
-	// SetOption sets an option the Listener. Setting options
-	// can only be done before Listen() has been called.
+	// SetOption sets an option on the Dialer. Setting options
+	// can only be done before Dial() has been called.
 	SetOption(name string, value interface{}) error
 
-	// GetOption gets an option value from the Listener.
+	// GetOption gets an option value from the Dialer.
 	GetOption(name string) (interface{}, error)
 }

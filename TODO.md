@@ -13,4 +13,3 @@ TODO
 - [ ] msg copy between transports
 - [ ] Asynchronous DNS queries
 - [ ] zero copy
-- [ ] sendhook/recvhook returns error instead of bool

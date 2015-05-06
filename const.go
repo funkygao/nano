@@ -122,7 +122,7 @@ const (
 
 	// OptionNoDelay is used to configure Nagle -- when true messages are
 	// sent as soon as possible, otherwise some buffering may occur.
-	// nagle's only applies to client rather than server.
+	// Note that Nagle only applies to client rather than server.
 	// Value is a boolean.  Default is true.
 	OptionNoDelay = "NO-DELAY"
 
@@ -145,20 +145,19 @@ const (
 // is stored in the upper 12 bits, and the minor (subprotocol) is located in
 // the bottom 4 bits.
 const (
-	ProtoPair       = (1 * 16)
-	ProtoPub        = (2 * 16)
-	ProtoSub        = (2 * 16) + 1
-	ProtoReq        = (3 * 16)
-	ProtoRep        = (3 * 16) + 1
-	ProtoPush       = (5 * 16)
-	ProtoPull       = (5 * 16) + 1
-	ProtoSurveyor   = (6 * 16) + 2
-	ProtoRespondent = (6 * 16) + 3
-	ProtoBus        = (7 * 16)
+	ProtoPair       = uint16(1 * 16)
+	ProtoPub        = uint16(2 * 16)
+	ProtoSub        = uint16(2*16) + 1
+	ProtoReq        = uint16(3 * 16)
+	ProtoRep        = uint16(3*16) + 1
+	ProtoPush       = uint16(5 * 16)
+	ProtoPull       = uint16(5*16) + 1
+	ProtoSurveyor   = uint16(6*16) + 2
+	ProtoRespondent = uint16(6*16) + 3
+	ProtoBus        = uint16(7 * 16)
 
 	// Experimental Protocols - Use at Risk
-
-	ProtoStar = (100 * 16)
+	ProtoStar = uint16(100 * 16)
 )
 
 const (

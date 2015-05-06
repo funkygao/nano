@@ -1,7 +1,6 @@
 package nano
 
 import (
-	"io"
 	"sync/atomic"
 	"time"
 )
@@ -45,7 +44,7 @@ func (this *Message) Free() {
 		return
 	}
 
-	// safe to put back cache pool for later reuse
+	// safe to put back message pool for later reuse
 	var ch chan *Message
 	for _, slab := range messagePool {
 		if this.slabSize == slab.maxBody {
@@ -73,19 +72,9 @@ func (this *Message) Dup() *Message {
 	return this
 }
 
-// TODO
-func (this *Message) Clone() *Message {
-	return nil
-}
-
-// WriteTo writes complete message body to a writer or
-// when an error occurs.
-func (this *Message) WriteTo(w io.Writer) (int, error) {
-	return w.Write(this.Body)
-}
-
 // NewMessage is the supported way to obtain a new Message.  This makes
-// use of a "cache" which greatly reduces the load on the garbage collector.
+// use of a "slab allocator" which greatly reduces the load on the
+// garbage collector.
 func NewMessage(sz int) *Message {
 	var msg *Message
 	var ch chan *Message

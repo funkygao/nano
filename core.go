@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// socket is the meaty part of the core information.
+// socket implements Socket & ProtocolSocket interfaces.
 type socket struct {
 	proto      Protocol
 	transports map[string]Transport
@@ -166,7 +166,7 @@ func (sock *socket) SendMsg(msg *Message) error {
 	if sock.sendHook != nil {
 		Debugf("sendHook: %+v", *msg)
 		if ok := sock.sendHook.SendHook(msg); !ok {
-			// just drop it silently TODO ErrsendHook?
+			// just drop it silently
 			Debugf("hook fail: %+v", *msg)
 			msg.Free() // safe to recycle
 			return nil
