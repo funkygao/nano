@@ -12,28 +12,31 @@ type push struct {
 	w    nano.Waiter
 }
 
-func (x *push) Init(sock nano.ProtocolSocket) {
-	x.sock = sock
-	x.w.Init()
-	x.sock.SetRecvError(nano.ErrProtoOp)
+func (this *push) Init(sock nano.ProtocolSocket) {
+	this.sock = sock
+	this.w.Init()
+
+	// send only
+	this.sock.SetRecvError(nano.ErrProtoOp)
 }
 
-func (x *push) Shutdown(expire time.Time) {
-	x.w.WaitAbsTimeout(expire)
+func (this *push) Shutdown(expire time.Time) {
+	this.w.WaitAbsTimeout(expire)
 }
 
-func (x *push) sender(ep nano.Endpoint) {
-	defer x.w.Done()
-	sq := x.sock.SendChannel()
-	cq := x.sock.CloseChannel()
-
+func (this *push) sender(ep nano.Endpoint) {
+	defer this.w.Done()
+	sendChan := this.sock.SendChannel()
+	closeChan := this.sock.CloseChannel()
 	for {
 		select {
-		case <-cq:
+		case <-closeChan:
 			return
-		case m := <-sq:
-			if ep.SendMsg(m) != nil {
-				m.Free()
+
+		case msg := <-sendChan:
+			if err := ep.SendMsg(msg); err != nil {
+				nano.Debugf("%v", err)
+				msg.Free()
 				return
 			}
 		}
@@ -57,31 +60,33 @@ func (*push) PeerName() string {
 	return "pull"
 }
 
-func (x *push) AddEndpoint(ep nano.Endpoint) {
-	x.w.Add()
-	go x.sender(ep)
+func (this *push) AddEndpoint(ep nano.Endpoint) {
+	this.w.Add()
+	go this.sender(ep)
 	go nano.NullRecv(ep)
 }
 
-func (x *push) RemoveEndpoint(ep nano.Endpoint) {}
+func (*push) RemoveEndpoint(ep nano.Endpoint) {}
 
-func (x *push) SetOption(name string, v interface{}) error {
+func (this *push) SetOption(name string, v interface{}) error {
 	var ok bool
 	switch name {
 	case nano.OptionRaw:
-		if x.raw, ok = v.(bool); !ok {
+		if this.raw, ok = v.(bool); !ok {
 			return nano.ErrBadValue
 		}
 		return nil
+
 	default:
 		return nano.ErrBadOption
 	}
 }
 
-func (x *push) GetOption(name string) (interface{}, error) {
+func (this *push) GetOption(name string) (interface{}, error) {
 	switch name {
 	case nano.OptionRaw:
-		return x.raw, nil
+		return this.raw, nil
+
 	default:
 		return nil, nano.ErrBadOption
 	}

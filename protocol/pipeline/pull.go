@@ -11,30 +11,38 @@ type pull struct {
 	raw  bool
 }
 
-func (x *pull) Init(sock nano.ProtocolSocket) {
-	x.sock = sock
-	x.sock.SetSendError(nano.ErrProtoOp)
+func (this *pull) Init(sock nano.ProtocolSocket) {
+	this.sock = sock
+
+	// recv only
+	this.sock.SetSendError(nano.ErrProtoOp)
 }
 
-func (x *pull) Shutdown(time.Time) {} // No sender to drain
+func (this *pull) AddEndpoint(ep nano.Endpoint) {
+	go this.receiver(ep)
+}
 
-func (x *pull) receiver(ep nano.Endpoint) {
-	rq := x.sock.RecvChannel()
-	cq := x.sock.CloseChannel()
+func (*pull) RemoveEndpoint(ep nano.Endpoint) {}
+
+func (this *pull) receiver(ep nano.Endpoint) {
+	recvChan := this.sock.RecvChannel()
+	closeChan := this.sock.CloseChannel()
 	for {
-
-		m := ep.RecvMsg()
-		if m == nil {
+		msg := ep.RecvMsg()
+		if msg == nil {
 			return
 		}
 
 		select {
-		case rq <- m:
-		case <-cq:
+		case recvChan <- msg:
+
+		case <-closeChan:
 			return
 		}
 	}
 }
+
+func (*pull) Shutdown(time.Time) {} // No sender to drain
 
 func (*pull) Number() uint16 {
 	return nano.ProtoPull
@@ -52,33 +60,29 @@ func (*pull) PeerName() string {
 	return "push"
 }
 
-func (x *pull) AddEndpoint(ep nano.Endpoint) {
-	go x.receiver(ep)
-}
-
-func (x *pull) RemoveEndpoint(ep nano.Endpoint) {}
-
 func (*pull) SendHook(msg *nano.Message) bool {
 	return false
 }
 
-func (x *pull) SetOption(name string, v interface{}) error {
+func (this *pull) SetOption(name string, v interface{}) error {
 	var ok bool
 	switch name {
 	case nano.OptionRaw:
-		if x.raw, ok = v.(bool); !ok {
+		if this.raw, ok = v.(bool); !ok {
 			return nano.ErrBadValue
 		}
 		return nil
+
 	default:
 		return nano.ErrBadOption
 	}
 }
 
-func (x *pull) GetOption(name string) (interface{}, error) {
+func (this *pull) GetOption(name string) (interface{}, error) {
 	switch name {
 	case nano.OptionRaw:
-		return x.raw, nil
+		return this.raw, nil
+
 	default:
 		return nil, nano.ErrBadOption
 	}
