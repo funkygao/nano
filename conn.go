@@ -133,7 +133,7 @@ func (this *connPipe) RecvMsg() (*Message, error) {
 		return nil, err
 	}
 
-	Debugf("msgbody: %s", string(msg.Body))
+	Debugf("msgbody: %s %#v", string(msg.Body), msg.Body) // TODO
 
 	this.rlock.Unlock()
 	return msg, nil
