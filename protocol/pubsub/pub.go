@@ -92,6 +92,7 @@ func (p *pub) sender() {
 
 		case msg = <-sendChan:
 			// copy message to each endpoints
+			// if no subscribers, drop the msg
 			p.Lock()
 			for _, peer := range p.eps {
 				m := msg.Dup()
@@ -103,6 +104,7 @@ func (p *pub) sender() {
 					m.Free()
 				}
 			}
+			msg.Free()
 			p.Unlock()
 		}
 	}
