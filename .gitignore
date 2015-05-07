@@ -7,3 +7,4 @@ examples/pubsub/pubsub
 examples/reqrep/reqrep
 examples/api/api
 examples/bus/bus
+apps/pubnub/pubnub
