@@ -11,16 +11,18 @@ type dialer struct {
 	sock      *socket
 	addr      string // remote server addr
 	closed    bool
+	active    bool
 	closeChan chan struct{}
 }
 
 func (this *dialer) Dial() error {
 	this.sock.Lock()
-	if this.sock.active {
+	if this.active {
 		this.sock.Unlock()
 		return ErrAddrInUse
 	}
 
+	this.active = true
 	this.sock.active = true
 	this.sock.Unlock()
 
