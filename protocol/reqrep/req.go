@@ -10,42 +10,47 @@ import (
 
 // req is an implementation of the req protocol.
 type req struct {
-	sync.Mutex
 	sock          nano.ProtocolSocket
-	eps           map[uint32]nano.Endpoint
 	resendMsgChan chan *nano.Message
 	raw           bool
 	retry         time.Duration
 	nextid        uint32
+	reqid         uint32
 	waker         *time.Timer
 	waiter        nano.Waiter
-	once          sync.Once
 
-	// fields describing the outstanding request
-	reqmsg *nano.Message
-	reqid  uint32
+	outstandingReq *nano.Message
+
+	sync.Mutex
 }
 
 func (r *req) Init(socket nano.ProtocolSocket) {
 	r.sock = socket
-	r.eps = make(map[uint32]nano.Endpoint)
 	r.resendMsgChan = make(chan *nano.Message) // TODO buffer
-	r.waiter.Init()
 
 	r.nextid = uint32(time.Now().UnixNano()) // quasi-random
 	r.retry = time.Minute * 1                // retry after a minute
 	r.waker = time.NewTimer(r.retry)
 	r.waker.Stop()
+
 	r.sock.SetRecvError(nano.ErrProtoState)
+
+	r.waiter.Init()
+	r.waiter.Add()
+	go r.resendMsgChaner()
 
 	nano.Debugf("got initial nextid:%d, recv state:%v, this:%+v",
 		r.nextid, nano.ErrProtoState, *r)
 }
 
-func (r *req) Shutdown(expire time.Time) {
-	nano.Debugf("expire:%v", expire)
-	r.waiter.WaitAbsTimeout(expire)
+func (r *req) AddEndpoint(ep nano.Endpoint) {
+	go r.receiver(ep)
+
+	r.waiter.Add()
+	go r.sender(ep)
 }
+
+func (*req) RemoveEndpoint(nano.Endpoint) {}
 
 // nextID returns the next request ID.
 func (r *req) nextID() uint32 {
@@ -70,7 +75,7 @@ func (r *req) resendMsgChaner() {
 		}
 
 		r.Lock()
-		m := r.reqmsg
+		m := r.outstandingReq
 		if m == nil {
 			r.Unlock()
 			continue
@@ -92,7 +97,6 @@ func (r *req) resendMsgChaner() {
 func (r *req) receiver(ep nano.Endpoint) {
 	recvChan := r.sock.RecvChannel()
 	closeChan := r.sock.CloseChannel()
-
 	var m *nano.Message
 	for {
 		m = ep.RecvMsg()
@@ -125,7 +129,6 @@ func (r *req) sender(ep nano.Endpoint) {
 	sendChan := r.sock.SendChannel()
 	closeChan := r.sock.CloseChannel()
 	resendChan := r.resendMsgChan
-
 	var m *nano.Message
 	for {
 		select {
@@ -141,6 +144,11 @@ func (r *req) sender(ep nano.Endpoint) {
 			break
 		}
 	}
+}
+
+func (r *req) Shutdown(expire time.Time) {
+	nano.Debugf("expire:%v", expire)
+	r.waiter.WaitAbsTimeout(expire)
 }
 
 func (*req) Number() uint16 {
@@ -159,41 +167,22 @@ func (*req) PeerName() string {
 	return "rep"
 }
 
-func (r *req) AddEndpoint(ep nano.Endpoint) {
-	r.once.Do(func() {
-		r.waiter.Add()
-		go r.resendMsgChaner()
-	})
-
-	r.Lock()
-	r.eps[ep.Id()] = ep
-	r.Unlock()
-	go r.receiver(ep)
-	r.waiter.Add()
-	go r.sender(ep)
-
-	nano.Debugf("invoke go: receiver,sender,resendMsgChaner eps:%v, ep:%#v",
-		r.eps, ep)
-}
-
-func (*req) RemoveEndpoint(nano.Endpoint) {}
-
 func (r *req) SendHook(m *nano.Message) bool {
 	if r.raw {
 		// Raw mode has no automatic retry, and must include the
 		// request id in the header coming down.
 		return true
 	}
+
 	r.Lock()
-	defer r.Unlock()
 
 	// We need to generate a new request id, and append it to the header.
 	r.reqid = r.nextID()
-	v := r.reqid
 	m.Header = append(m.Header,
-		byte(v>>24), byte(v>>16), byte(v>>8), byte(v))
+		byte(r.reqid>>24), byte(r.reqid>>16), byte(r.reqid>>8), byte(r.reqid))
+	nano.Debugf("reqid:%d %v", r.reqid, *m)
 
-	r.reqmsg = m.Dup()
+	r.outstandingReq = m.Dup()
 
 	// Schedule a retry, in case we don't get a reply.
 	if r.retry > 0 {
@@ -204,8 +193,10 @@ func (r *req) SendHook(m *nano.Message) bool {
 
 	r.sock.SetRecvError(nil)
 
-	nano.Debugf("send state normal, msg header:%v, reqid:%v", m.Header, v)
+	nano.Debugf("send state normal, msg header:%v, reqid:%v", m.Header,
+		r.reqid)
 
+	r.Unlock()
 	return true
 }
 
@@ -214,24 +205,27 @@ func (r *req) RecvHook(m *nano.Message) bool {
 		// Raw mode just passes up messages unmolested.
 		return true
 	}
+
+	nano.Debugf("%+v", *m)
+
 	r.Lock()
-	defer r.Unlock()
 	if len(m.Header) < 4 {
 		return false
 	}
-	if r.reqmsg == nil {
+	if r.outstandingReq == nil {
 		return false
 	}
 	if binary.BigEndian.Uint32(m.Header) != r.reqid {
+		r.Unlock()
 		return false
 	}
 	r.waker.Stop()
-	r.reqmsg.Free()
-	r.reqmsg = nil
+	r.outstandingReq.Free()
+	r.outstandingReq = nil
+
 	r.sock.SetRecvError(nano.ErrProtoState)
 
-	//nano.Debugf("recv state:%v, msg header:%v, reqmsg:%v",
-	//nano.ErrProtoState, m.Header, *r.reqmsg)
+	r.Unlock()
 	return true
 }
 
