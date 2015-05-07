@@ -1,11 +1,11 @@
 TODO
 ====
 
+- [ ] sync.Pool and bytes.Buffer
 - [ ] high performance timer, timewheel
 - [ ] snappy
 - [ ] props/options key is int instead of string
 - [X] bufio
-- [ ] sync.Pool and bytes.Buffer
 - [ ] big size msg
 - [X] demo Device usage
    
@@ -13,3 +13,4 @@ TODO
 - [ ] msg copy between transports
 - [ ] Asynchronous DNS queries
 - [ ] zero copy
+- [ ] optional handshake
