@@ -16,12 +16,51 @@ type busEp struct {
 	x  *bus
 }
 
+func (pe *busEp) peerSender() {
+	for {
+		m := <-pe.q
+		if m == nil {
+			return
+		}
+
+		if pe.ep.SendMsg(m) != nil {
+			m.Free()
+			return
+		}
+	}
+}
+
+func (pe *busEp) receiver() {
+	recvChan := pe.x.sock.RecvChannel()
+	closeChan := pe.x.sock.CloseChannel()
+	var m *nano.Message
+	for {
+		m = pe.ep.RecvMsg()
+		if m == nil {
+			return
+		}
+
+		v := pe.ep.Id()
+		m.Header = append(m.Header,
+			byte(v>>24), byte(v>>16), byte(v>>8), byte(v))
+
+		select {
+		case recvChan <- m:
+		case <-closeChan:
+			m.Free()
+			return
+		default:
+			// No room, so we just drop it.
+			m.Free()
+		}
+	}
+}
+
 type bus struct {
 	sock  nano.ProtocolSocket
 	peers map[uint32]*busEp
 	raw   bool
 	w     nano.Waiter
-	init  sync.Once
 
 	sync.Mutex
 }
@@ -30,46 +69,72 @@ type bus struct {
 func (x *bus) Init(sock nano.ProtocolSocket) {
 	x.sock = sock
 	x.peers = make(map[uint32]*busEp)
+
 	x.w.Init()
+	x.w.Add()
+	go x.sender()
 }
 
-func (x *bus) Shutdown(expire time.Time) {
-
-	x.w.WaitAbsTimeout(expire)
-
+func (x *bus) AddEndpoint(ep nano.Endpoint) {
+	// Set our broadcast qlen to match upper qlen -- this should
+	// help avoid dropping when bursting, if we burst before we
+	// context switch.
+	qlen := 16
+	if i, err := x.sock.GetOption(nano.OptionWriteQLen); err == nil {
+		qlen = i.(int)
+	}
+	pe := &busEp{
+		ep: ep,
+		x:  x,
+		q:  make(chan *nano.Message, qlen),
+	}
 	x.Lock()
-	peers := x.peers
-	x.peers = make(map[uint32]*busEp)
+	x.peers[ep.Id()] = pe
 	x.Unlock()
 
-	for id, peer := range peers {
-		nano.DrainChannel(peer.q, expire)
-		close(peer.q)
-		delete(peers, id)
-	}
+	go pe.peerSender()
+	go pe.receiver()
 }
 
-// Bottom sender.
-func (pe *busEp) peerSender() {
+func (x *bus) RemoveEndpoint(ep nano.Endpoint) {
+	x.Lock()
+	if peer := x.peers[ep.Id()]; peer != nil {
+		close(peer.q) // TODO dup close?
+		delete(x.peers, ep.Id())
+	}
+	x.Unlock()
+}
+
+func (x *bus) sender() {
+	defer x.w.Done()
+	sendChan := x.sock.SendChannel()
+	closeChan := x.sock.CloseChannel()
 	for {
-		m := <-pe.q
-		if m == nil {
+		var id uint32
+		select {
+		case <-closeChan:
 			return
-		}
-		if pe.ep.SendMsg(m) != nil {
+
+		case m := <-sendChan:
+			// If a header was present, it means this message is
+			// being rebroadcast.  It should be a pipe ID.
+			if len(m.Header) >= 4 {
+				id = binary.BigEndian.Uint32(m.Header)
+				m.Header = m.Header[4:]
+			}
+			x.broadcast(m, id)
 			m.Free()
-			return
 		}
 	}
 }
 
 func (x *bus) broadcast(m *nano.Message, sender uint32) {
-
 	x.Lock()
 	for id, pe := range x.peers {
 		if sender == id {
 			continue
 		}
+
 		m = m.Dup()
 
 		select {
@@ -87,81 +152,19 @@ func (x *bus) broadcast(m *nano.Message, sender uint32) {
 	x.Unlock()
 }
 
-func (x *bus) sender() {
-	sq := x.sock.SendChannel()
-	cq := x.sock.CloseChannel()
-	defer x.w.Done()
-	for {
-		var id uint32
-		select {
-		case <-cq:
-			return
-		case m := <-sq:
-			// If a header was present, it means this message is
-			// being rebroadcast.  It should be a pipe ID.
-			if len(m.Header) >= 4 {
-				id = binary.BigEndian.Uint32(m.Header)
-				m.Header = m.Header[4:]
-			}
-			x.broadcast(m, id)
-			m.Free()
-		}
-	}
-}
+func (x *bus) Shutdown(expire time.Time) {
+	x.w.WaitAbsTimeout(expire)
 
-func (pe *busEp) receiver() {
-
-	rq := pe.x.sock.RecvChannel()
-	cq := pe.x.sock.CloseChannel()
-
-	for {
-		m := pe.ep.RecvMsg()
-		if m == nil {
-			return
-		}
-		v := pe.ep.Id()
-		m.Header = append(m.Header,
-			byte(v>>24), byte(v>>16), byte(v>>8), byte(v))
-
-		select {
-		case rq <- m:
-		case <-cq:
-			m.Free()
-			return
-		default:
-			// No room, so we just drop it.
-			m.Free()
-		}
-	}
-}
-
-func (x *bus) AddEndpoint(ep nano.Endpoint) {
-	x.init.Do(func() {
-		x.w.Add()
-		go x.sender()
-	})
-	// Set our broadcast depth to match upper depth -- this should
-	// help avoid dropping when bursting, if we burst before we
-	// context switch.
-	depth := 16
-	if i, err := x.sock.GetOption(nano.OptionWriteQLen); err == nil {
-		depth = i.(int)
-	}
-	pe := &busEp{ep: ep, x: x, q: make(chan *nano.Message, depth)}
 	x.Lock()
-	x.peers[ep.Id()] = pe
+	peers := x.peers
+	x.peers = make(map[uint32]*busEp)
 	x.Unlock()
-	go pe.peerSender()
-	go pe.receiver()
-}
 
-func (x *bus) RemoveEndpoint(ep nano.Endpoint) {
-	x.Lock()
-	if peer := x.peers[ep.Id()]; peer != nil {
+	for id, peer := range peers {
+		nano.DrainChannel(peer.q, expire)
 		close(peer.q)
-		delete(x.peers, ep.Id())
+		delete(peers, id)
 	}
-	x.Unlock()
 }
 
 func (*bus) Number() uint16 {
