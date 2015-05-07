@@ -70,7 +70,7 @@ func (p *pub) AddEndpoint(ep nano.Endpoint) {
 	subscriber.w.Init()
 	subscriber.w.Add()
 	go subscriber.peerSender()
-	go nano.NullRecv(ep)
+	go nano.NullRecv(ep) // avoid goroutine leakage
 }
 
 func (p *pub) RemoveEndpoint(ep nano.Endpoint) {
