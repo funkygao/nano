@@ -274,6 +274,7 @@ func (sock *socket) SendMsg(msg *Message) error {
 		return ErrClosed
 
 	case sock.sendChan <- msg:
+		Debugf("%+v %+v", msg, sock.sendChan)
 		return nil
 	}
 }

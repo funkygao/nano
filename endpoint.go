@@ -22,7 +22,6 @@ func endpointIdGenerator() {
 		if id == 0 {
 			continue
 		}
-		Debugf("pipe id gen: %d", id)
 
 		endpointPool.nextidChan <- id
 	}
