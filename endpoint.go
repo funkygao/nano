@@ -17,7 +17,7 @@ func endpointIdGenerator() {
 	var nextid = uint32(rand.NewSource(time.Now().UnixNano()).Int63())
 	var id uint32
 	for {
-		id = nextid & 0x7fffffff
+		id = nextid & 0x7fffffff // will never conflict with REQ.id
 		nextid++
 		if id == 0 {
 			continue
@@ -116,7 +116,6 @@ func (this *pipeEndpoint) SendMsg(msg *Message) error {
 }
 
 func (this *pipeEndpoint) RecvMsg() *Message {
-	Debugf("calling %T.RecvMsg", this.pipe)
 	msg, err := this.pipe.RecvMsg()
 	if err != nil {
 		// e,g connection reset by peer: read a socket that was closed by peer, RST

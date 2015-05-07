@@ -21,23 +21,27 @@ func (s *sub) Init(sock nano.ProtocolSocket) {
 	s.sock.SetSendError(nano.ErrProtoOp)
 }
 
-func (*sub) Shutdown(time.Time) {} // No sender to drain.
+func (s *sub) AddEndpoint(ep nano.Endpoint) {
+	go s.receiver(ep)
+}
+
+func (*sub) RemoveEndpoint(nano.Endpoint) {}
 
 func (s *sub) receiver(ep nano.Endpoint) {
-	rq := s.sock.RecvChannel()
-	cq := s.sock.CloseChannel()
-
+	recvChan := s.sock.RecvChannel()
+	closeChan := s.sock.CloseChannel()
+	var msg *nano.Message
 	for {
-		var matched = false
-
-		m := ep.RecvMsg()
-		if m == nil {
+		msg = ep.RecvMsg()
+		if msg == nil {
+			// endpoint closed
 			return
 		}
 
+		var matched = false
 		s.Lock()
 		for _, sub := range s.subs {
-			if bytes.HasPrefix(m.Body, sub) {
+			if bytes.HasPrefix(msg.Body, sub) {
 				// Matched, send it up.  Best effort.
 				matched = true
 				break
@@ -46,20 +50,24 @@ func (s *sub) receiver(ep nano.Endpoint) {
 		s.Unlock()
 
 		if !matched {
-			m.Free()
+			msg.Free()
 			continue
 		}
 
 		select {
-		case rq <- m:
-		case <-cq:
-			m.Free()
+		case recvChan <- msg:
+
+		case <-closeChan:
+			msg.Free()
 			return
+
 		default: // no room, drop it
-			m.Free()
+			msg.Free()
 		}
 	}
 }
+
+func (*sub) Shutdown(time.Time) {} // No sender to drain.
 
 func (*sub) Number() uint16 {
 	return nano.ProtoSub
@@ -76,12 +84,6 @@ func (*sub) Name() string {
 func (*sub) PeerName() string {
 	return "pub"
 }
-
-func (s *sub) AddEndpoint(ep nano.Endpoint) {
-	go s.receiver(ep)
-}
-
-func (*sub) RemoveEndpoint(nano.Endpoint) {}
 
 func (s *sub) SetOption(name string, value interface{}) error {
 	s.Lock()

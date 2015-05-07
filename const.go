@@ -145,16 +145,25 @@ const (
 // is stored in the upper 12 bits, and the minor (subprotocol) is located in
 // the bottom 4 bits.
 const (
-	ProtoPair       = uint16(1 * 16)
-	ProtoPub        = uint16(2 * 16)
-	ProtoSub        = uint16(2*16) + 1
-	ProtoReq        = uint16(3 * 16)
-	ProtoRep        = uint16(3*16) + 1
-	ProtoPush       = uint16(5 * 16)
-	ProtoPull       = uint16(5*16) + 1
-	ProtoSurveyor   = uint16(6*16) + 2
-	ProtoRespondent = uint16(6*16) + 3
-	ProtoBus        = uint16(7 * 16)
+	ProtoPair = uint16(1*16) + 0
+
+	protoPubSub = 2
+	ProtoPub    = uint16(protoPubSub*16) + 0
+	ProtoSub    = uint16(protoPubSub*16) + 1
+
+	protoReqRep = 3
+	ProtoReq    = uint16(protoReqRep*16) + 0
+	ProtoRep    = uint16(protoReqRep*16) + 1
+
+	protoPipeline = 5
+	ProtoPush     = uint16(protoPipeline*16) + 0
+	ProtoPull     = uint16(protoPipeline*16) + 1
+
+	protoSurvey     = 6
+	ProtoSurveyor   = uint16(protoSurvey*16) + 0
+	ProtoRespondent = uint16(protoSurvey*16) + 1
+
+	ProtoBus = uint16(7*16) + 0
 
 	// Experimental Protocols - Use at Risk
 	ProtoStar = uint16(100 * 16)

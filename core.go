@@ -299,12 +299,11 @@ func (sock *socket) RecvMsg() (*Message, error) {
 			Debugf("recv msg: %+v", *msg)
 
 			if sock.recvHook != nil {
-				Debugf("RecvHook: %+v", *msg)
 				if ok := sock.recvHook.RecvHook(msg); ok {
-					Debugf("hook fail: %+v", *msg)
+					Debugf("after RecvHook: %+v", *msg)
 					return msg, nil
 				} else {
-					// discard this msg and get next msg
+					// drop this msg and get next msg
 					msg.Free()
 				}
 			} else {
@@ -436,8 +435,6 @@ func (sock *socket) SetPortHook(newhook PortHook) PortHook {
 
 func (sock *socket) addPipe(connPipe Pipe, d *dialer, l *listener) *pipeEndpoint {
 	pe := newPipeEndpoint(connPipe, d, l)
-	Debugf("d:%+v, l:%+v", d, l)
-
 	sock.Lock()
 	if fn := sock.portHook; fn != nil {
 		sock.Unlock()
