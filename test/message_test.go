@@ -32,3 +32,15 @@ func TestMessagePoolEdgeCase(t *testing.T) {
 	msg = nano.NewMessage(8192)
 	assert.Equal(t, 8192, cap(msg.Body))
 }
+
+func TestMessageRecyle(t *testing.T) {
+	msg := nano.NewMessage(5)
+	msg = msg.Dup()
+	msg = msg.Dup()
+	assert.Equal(t, false, msg.Free())
+	assert.Equal(t, false, msg.Free())
+	assert.Equal(t, true, msg.Free())
+
+	// free on an already free'ed msg
+	assert.Equal(t, true, msg.Free())
+}
