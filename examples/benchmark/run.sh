@@ -1,5 +1,6 @@
 #!/bin/sh 
 
+rm -f benchmark
 go build
 ./benchmark pull & pull=$!
 ./benchmark push & push=$1
