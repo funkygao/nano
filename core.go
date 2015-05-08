@@ -38,19 +38,17 @@ type socket struct {
 	// we store pipes so that socket close will gracefully close all endpoints.
 	pipes []*pipeEndpoint
 
-	sendHook ProtocolSendHook // pipeline/reqrep/survey are hooking
-	recvHook ProtocolRecvHook // bus/reqrep/survey are hooking
-
-	portHook PortHook
+	sendHook ProtocolSendHook // hook on sendMsg
+	recvHook ProtocolRecvHook // hook on recvMsg
+	portHook PortHook         // hook on port add/remove
 }
 
 // MakeSocket is intended for use by Protocol implementations.  The intention
 // is that they can wrap this to provide a "proto.NewSocket()" implementation.
 func MakeSocket(proto Protocol) Socket {
-	Debugf("proto: %v", proto.Name())
 	sock := &socket{
 		proto:      proto,
-		transports: make(map[string]Transport, 1),
+		transports: make(map[string]Transport),
 
 		sendChanSize: defaultChanLen,
 		sendChan:     make(chan *Message, defaultChanLen), // 128
@@ -58,11 +56,11 @@ func MakeSocket(proto Protocol) Socket {
 		recvChan:     make(chan *Message, defaultChanLen), // 128
 		closeChan:    make(chan struct{}),
 
-		redialTime: defaultRedialTime, // 100ms, backoff with double redial time
+		redialTime: defaultRedialTime, // 100ms, backoff *2 till redialMax
 		redialMax:  defaultRedialMax,  // 1m
 		linger:     defaultLingerTime, // 1s
 
-		pipes: make([]*pipeEndpoint, 0), // TODO
+		pipes: make([]*pipeEndpoint, 0), // when listen, will reset cap
 	}
 
 	if hook, ok := proto.(ProtocolRecvHook); ok {
@@ -164,6 +162,8 @@ func (sock *socket) NewListener(addr string, options map[string]interface{}) (Li
 			return nil, err
 		}
 	}
+
+	sock.pipes = make([]*pipeEndpoint, 0, defaultServerPipesCap)
 
 	return l, nil
 }
