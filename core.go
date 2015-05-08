@@ -327,6 +327,11 @@ func (sock *socket) Send(b []byte) error {
 	return sock.SendMsg(msg)
 }
 
+func (sock *socket) XSend(buf *bytes.Buffer) error {
+	msg := &Message{Body: buf.Bytes(), Header: nil, refCount: 1}
+	return sock.SendMsg(msg)
+}
+
 func (sock *socket) Recv() ([]byte, error) {
 	msg, err := sock.RecvMsg()
 	if err != nil {

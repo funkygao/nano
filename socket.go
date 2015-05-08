@@ -20,12 +20,15 @@ type Socket interface {
 	// long as the Socket is open.
 	Send([]byte) error
 
+	// XSend is same as Recv except that it accept buffer as arg.
+	XSend(*bytes.Buffer) error
+
 	// Recv receives a complete message.  The entire message is received.
 	Recv() ([]byte, error)
 
 	// XRecv is same as Recv except that it can make use of buffer to
 	// reduce GC presure.
-	XRecv(buf *bytes.Buffer) (n int, err error)
+	XRecv(*bytes.Buffer) (n int, err error)
 
 	// SendMsg puts the message on the outbound queue.  It works like Send,
 	// but allows the caller to supply message headers.  AGAIN, the Socket
