@@ -41,6 +41,7 @@ type rep struct {
 	ttl int
 
 	waiter nano.Waiter
+	once   sync.Once
 	sync.Mutex
 }
 
@@ -55,11 +56,14 @@ func (r *rep) Init(sock nano.ProtocolSocket) {
 		nano.ErrProtoState)
 
 	r.waiter.Init()
-	r.waiter.Add()
-	go r.sender()
 }
 
 func (r *rep) AddEndpoint(ep nano.Endpoint) {
+	r.once.Do(func() {
+		r.waiter.Add()
+		go r.sender()
+	})
+
 	pe := &repEp{
 		ep: ep,
 		q:  make(chan *nano.Message, 2), // TODO

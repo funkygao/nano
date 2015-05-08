@@ -21,6 +21,7 @@ type req struct {
 
 	outstandingReq *nano.Message
 
+	once sync.Once
 	sync.Mutex
 }
 
@@ -36,14 +37,17 @@ func (r *req) Init(socket nano.ProtocolSocket) {
 	r.sock.SetRecvError(nano.ErrProtoState)
 
 	r.waiter.Init()
-	r.waiter.Add()
-	go r.resendMsgChaner()
 
 	nano.Debugf("got initial nextid:%d, recv state:%v, this:%+v",
 		r.nextid, nano.ErrProtoState, *r)
 }
 
 func (r *req) AddEndpoint(ep nano.Endpoint) {
+	r.once.Do(func() {
+		r.waiter.Add()
+		go r.resender()
+	})
+
 	go r.receiver(ep)
 
 	r.waiter.Add()
@@ -62,8 +66,8 @@ func (r *req) nextID() uint32 {
 	return v
 }
 
-// resendMsgChan sends the request message again, after a timer has expired.
-func (r *req) resendMsgChaner() {
+// resender sends the request message again, after a timer has expired.
+func (r *req) resender() {
 	defer r.waiter.Done()
 	closeChan := r.sock.CloseChannel()
 

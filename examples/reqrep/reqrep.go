@@ -11,7 +11,7 @@ import (
 )
 
 func init() {
-	nano.Debug = true
+	nano.Debug = false
 }
 
 func dieIfErr(err error) {
