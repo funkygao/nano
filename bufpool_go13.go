@@ -15,10 +15,10 @@ func init() {
 	}
 }
 
-func bufferPoolGet() *bytes.Buffer {
+func BufferPoolGet() *bytes.Buffer {
 	return bufferPool.Get().(*bytes.Buffer)
 }
 
-func bufferPoolPut(b *bytes.Buffer) {
+func BufferPoolPut(b *bytes.Buffer) {
 	bufferPool.Put(b)
 }

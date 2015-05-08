@@ -1,6 +1,7 @@
 package nano
 
 import (
+	"bytes"
 	"strings"
 	"sync"
 	"time"
@@ -333,6 +334,20 @@ func (sock *socket) Recv() ([]byte, error) {
 	}
 
 	return msg.Body, nil // FIXME when to msg.Free?
+}
+
+func (sock *socket) XRecv(buf *bytes.Buffer) (n int, err error) {
+	var msg *Message
+	msg, err = sock.RecvMsg()
+	if err != nil {
+		return
+	}
+
+	buf.Reset()
+	n, err = buf.Write(msg.Body)
+	msg.Free() // recycle this msg
+
+	return
 }
 
 func (sock *socket) SetOption(name string, value interface{}) error {

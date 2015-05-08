@@ -1,5 +1,9 @@
 package nano
 
+import (
+	"bytes"
+)
+
 // Socket is the main access handle applications use to access the SP
 // system.  It is an abstraction of an application's "connection" to a
 // messaging topology.  Applications can have more than one Socket open
@@ -18,6 +22,10 @@ type Socket interface {
 
 	// Recv receives a complete message.  The entire message is received.
 	Recv() ([]byte, error)
+
+	// XRecv is same as Recv except that it can make use of buffer to
+	// reduce GC presure.
+	XRecv(buf *bytes.Buffer) (n int, err error)
 
 	// SendMsg puts the message on the outbound queue.  It works like Send,
 	// but allows the caller to supply message headers.  AGAIN, the Socket
