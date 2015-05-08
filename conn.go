@@ -165,17 +165,17 @@ func (this *connPipe) SendMsg(msg *Message) error {
 		msg.Free()
 		return err
 	}
-	if err := this.writer.Flush(); err != nil {
-		this.wlock.Unlock()
-		msg.Free()
-		return err
-	}
 
 	Debugf("sz: %d, h:%v, b:%s", sz, msg.Header, string(msg.Body))
 
 	this.wlock.Unlock()
 	msg.Free() // msg is recycled
 	return nil
+}
+
+func (this *connPipe) Flush() error {
+	// TODO is bytes.Buffer thread safe?
+	return this.writer.Flush()
 }
 
 // LocalProtocol returns our local protocol number.

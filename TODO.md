@@ -3,7 +3,8 @@ TODO
 
 - [X] sync.Pool and bytes.Buffer
 - [ ] benchmark shows mem leakage
-- [ ] batch the framed msg to increase throughput
+- [X] batch the framed msg to increase throughput
+  protocol will have to manually call ep.Flush
 - [ ] device use sendfile for zero copy
 - [ ] newPipeEndpoint will be recycled in pool
 - [ ] tls demo

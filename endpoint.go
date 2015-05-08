@@ -104,6 +104,17 @@ func (this *pipeEndpoint) Close() error {
 	return nil
 }
 
+func (this *pipeEndpoint) Flush() error {
+	Debugf("flushing")
+
+	if err := this.pipe.Flush(); err != nil {
+		this.Close()
+		return err
+	}
+
+	return nil
+}
+
 func (this *pipeEndpoint) SendMsg(msg *Message) error {
 	Debugf("msg: %+v, calling %T.SendMsg", *msg, this.pipe)
 	if err := this.pipe.SendMsg(msg); err != nil {
