@@ -141,7 +141,6 @@ func (this *connPipe) RecvMsg() (*Message, error) {
 
 // SendMsg implements the Pipe SendMsg method.  The message is sent as a 64-bit
 // size (network byte order) followed by the message itself.
-// TODO SendMsg seems not to match RecvMsg contents, header ignored?
 func (this *connPipe) SendMsg(msg *Message) error {
 	sz := uint64(len(msg.Header) + len(msg.Body))
 
@@ -175,7 +174,7 @@ func (this *connPipe) SendMsg(msg *Message) error {
 	Debugf("sz: %d, h:%v, b:%s", sz, msg.Header, string(msg.Body))
 
 	this.wlock.Unlock()
-	msg.Free()
+	msg.Free() // msg is recycled
 	return nil
 }
 
