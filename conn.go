@@ -264,8 +264,25 @@ func NewConnPipeIPC(conn net.Conn, proto Protocol, props ...interface{}) (Pipe, 
 		this.props[props[i].(string)] = props[i+1]
 	}
 
-	if err := this.handshake(); err != nil {
-		return nil, err
+	v, err := this.GetProp(OptionDisableHandshake)
+	if err != nil || !v.(bool) {
+		// handshake will not use snappy|deflate
+		if err := this.handshake(); err != nil {
+			return nil, err
+		}
+	}
+
+	v, err = this.GetProp(OptionSnappy)
+	if err == nil && v.(bool) {
+		this.upgradeSnappy()
+	} else {
+		v, err = this.GetProp(OptionDeflate)
+		if err == nil {
+			this.upgradeDeflate(v.(int))
+		} else {
+			this.reader = bufio.NewReaderSize(conn, defaultBufferSize)
+			this.writer = bufio.NewWriterSize(conn, defaultBufferSize)
+		}
 	}
 
 	return this, nil

@@ -20,7 +20,7 @@ func AddAll(sock nano.Socket) {
 
 func AddAllOptions(sock nano.Socket, opts ...interface{}) {
 	sock.AddTransport(tcp.NewTransport(opts...))
+	sock.AddTransport(ipc.NewTransport(opts...))
 	sock.AddTransport(inproc.NewTransport()) // TODO
-	sock.AddTransport(ipc.NewTransport())
 	sock.AddTransport(tlstcp.NewTransport())
 }
