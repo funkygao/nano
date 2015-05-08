@@ -1,6 +1,6 @@
 // Package transport implements nano.Transport interface.
 // Examples of transport url:
-// tcp://*:5678  ipc://x.sock  inproc://test  tlstcp://12.1.22.1:5678
+// tcp://*:5678  ipc://x.sock  inproc://test  tls+tcp://12.1.22.1:5678
 /*
 type Transport interface {
 
