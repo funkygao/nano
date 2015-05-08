@@ -13,9 +13,9 @@ type socket struct {
 
 	sync.RWMutex
 
-	sendChan     chan *Message
+	sendChan     chan *Message // TODO never close it?
 	sendChanSize int
-	recvChan     chan *Message
+	recvChan     chan *Message // TODO never close it?
 	recvChanSize int
 	closeChan    chan struct{} // closed when user requests close
 
@@ -246,6 +246,7 @@ func (sock *socket) Close() error {
 	return nil
 }
 
+// application need NOT care about msg recycling
 func (sock *socket) SendMsg(msg *Message) error {
 	sock.RLock()
 	err := sock.sendErr
@@ -279,6 +280,7 @@ func (sock *socket) SendMsg(msg *Message) error {
 	}
 }
 
+// application WILL recycle this message
 func (sock *socket) RecvMsg() (*Message, error) {
 	sock.RLock()
 	err := sock.recvErr
