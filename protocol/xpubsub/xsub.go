@@ -35,11 +35,11 @@ func (this *xsub) GetOption(name string) (interface{}, error) {
 }
 
 func (*xsub) Name() string {
-	return "sub"
+	return "xsub"
 }
 
 func (*xsub) PeerName() string {
-	return "pub"
+	return "xpub"
 }
 
 func (*xsub) Handshake() bool {
@@ -47,11 +47,11 @@ func (*xsub) Handshake() bool {
 }
 
 func (*xsub) Number() uint16 {
-	return nano.ProtoSub
+	return nano.ProtoXSub
 }
 
 func (*xsub) PeerNumber() uint16 {
-	return nano.ProtoPub
+	return nano.ProtoXPub
 }
 
 func NewXSubSocket() nano.Socket {
