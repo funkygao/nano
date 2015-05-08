@@ -109,10 +109,6 @@ func (*pair) PeerName() string {
 	return "pair"
 }
 
-func (*pair) Handshake() bool {
-	return true
-}
-
 func (this *pair) SetOption(name string, val interface{}) error {
 	var ok bool
 	switch name {

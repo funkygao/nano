@@ -42,10 +42,6 @@ func (*xsub) PeerName() string {
 	return "xpub"
 }
 
-func (*xsub) Handshake() bool {
-	return true
-}
-
 func (*xsub) Number() uint16 {
 	return nano.ProtoXSub
 }

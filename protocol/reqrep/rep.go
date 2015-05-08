@@ -200,10 +200,6 @@ func (*rep) PeerName() string {
 	return "req"
 }
 
-func (*rep) Handshake() bool {
-	return true
-}
-
 func (r *rep) Shutdown(expire time.Time) {
 	r.waiter.WaitAbsTimeout(expire)
 

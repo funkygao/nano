@@ -172,10 +172,6 @@ func (*req) PeerName() string {
 	return "rep"
 }
 
-func (*req) Handshake() bool {
-	return true
-}
-
 func (r *req) SendHook(m *nano.Message) bool {
 	if r.raw {
 		// Raw mode has no automatic retry, and must include the

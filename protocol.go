@@ -64,10 +64,6 @@ type Protocol interface {
 	// PeerName() returns the name of our peer protocol.
 	PeerName() string
 
-	// Handshake indicates whether handshake will be taken when endpoints
-	// connected. If false, handshake will be ignored.
-	Handshake() bool
-
 	// GetOption is used to retrieve the current value of an option.
 	// If the protocol doesn't recognize the option, EBadOption should
 	// be returned.
