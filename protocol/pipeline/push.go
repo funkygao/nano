@@ -39,8 +39,8 @@ func (this *push) sender(ep nano.Endpoint) {
 
 		case msg := <-sendChan:
 			if err := ep.SendMsg(msg); err != nil {
+				// ep will close itself
 				nano.Debugf("%v", err)
-				msg.Free()
 				return
 			}
 		}
