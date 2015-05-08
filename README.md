@@ -15,6 +15,7 @@ nano is easy to use, but behind the scenes, it does a lot:
 - It manages timeout and thread safety.
 - It ensures that individual peers are assigned their fair share of server resources so that a single client can't hijack the server. 
 - It routes the replies to the original requester.
+- It compress/decompress IO streams on demand.
 
 Enjoy!
 

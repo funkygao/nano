@@ -143,6 +143,18 @@ const (
 	// it will be dropped.  This is used to provide protection against
 	// loops in the topology.  The default is protocol specific.
 	OptionTtl = "TTL"
+
+	// OptionDisableHandshake is used to disable handshake when two endpoints
+	// are connected. Note that this will not be compliant with SP.
+	OptionDisableHandshake = "NO-HANDSHAKE"
+
+	// OptionSnappy is used to use google snappy compress/decompress all
+	// messages IO stream.
+	OptionSnappy = "SNAPPY"
+
+	// OptionDeflate is used to use flate compress/decompress messsage
+	// IO streams.
+	OptionDeflate = "FLATE"
 )
 
 // Useful constants for protocol numbers.  Note that the major protocol number

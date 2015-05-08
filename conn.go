@@ -2,10 +2,13 @@ package nano
 
 import (
 	"bufio"
+	"compress/flate"
 	"encoding/binary"
 	"io"
 	"net"
 	"sync"
+
+	"github.com/mreiferson/go-snappystream"
 )
 
 // connPipe implements the Pipe interface on top of net.Conn.
@@ -100,6 +103,20 @@ func (this *connPipe) handshake() error {
 
 	this.open = true
 	return nil
+}
+
+func (this *connPipe) upgradeSnappy() {
+	r := snappystream.NewReader(this.conn, snappystream.SkipVerifyChecksum)
+	w := snappystream.NewWriter(this.conn)
+	this.reader = bufio.NewReaderSize(r, defaultBufferSize)
+	this.writer = bufio.NewWriterSize(w, defaultBufferSize)
+}
+
+func (this *connPipe) upgradeDeflate(level int) {
+	r := flate.NewReader(this.conn)
+	w, _ := flate.NewWriter(this.conn, level)
+	this.reader = bufio.NewReaderSize(r, defaultBufferSize)
+	this.writer = bufio.NewWriterSize(w, defaultBufferSize)
 }
 
 // RecvMsg implements the Pipe RecvMsg method.  The message received is expected as
