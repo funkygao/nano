@@ -70,9 +70,6 @@ func MakeSocket(proto Protocol) Socket {
 		sock.sendHook = hook
 	}
 
-	Debugf("sock:%+v", *sock)
-
-	// let protocol plugin initialize
 	proto.Init(sock)
 
 	return sock
@@ -84,7 +81,7 @@ func (sock *socket) DialOptions(addr string, options map[string]interface{}) err
 		return err
 	}
 
-	Debugf("addr:%s, opt:%v, dialing...", addr, options)
+	Debugf("dialing addr:%s, opt:%v", addr, options)
 
 	return d.Dial()
 }
@@ -125,7 +122,7 @@ func (sock *socket) ListenOptions(addr string, options map[string]interface{}) e
 		return err
 	}
 
-	Debugf("addr:%s, opt:%v, listen...", addr, options)
+	Debugf("listening on addr:%s, opt:%v", addr, options)
 
 	return l.Listen()
 }
@@ -134,7 +131,6 @@ func (sock *socket) Listen(addr string) error {
 	return sock.ListenOptions(addr, nil)
 }
 
-// NewListener wraps PipeListener created in Transport.
 func (sock *socket) NewListener(addr string, options map[string]interface{}) (Listener, error) {
 	// This function sets up a goroutine to accept inbound connections.
 	// The accepted connection will be added to a list of accepted
@@ -163,6 +159,8 @@ func (sock *socket) NewListener(addr string, options map[string]interface{}) (Li
 		}
 	}
 
+	// avoid problem of listener constantly grows pipes when many
+	// concurrent conn dials in
 	sock.pipes = make([]*pipeEndpoint, 0, defaultServerPipesCap)
 
 	return l, nil
