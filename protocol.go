@@ -20,6 +20,9 @@ type Endpoint interface {
 	// blocking call.
 	SendMsg(*Message) error
 
+	// Flush sends all buffered messages.
+	Flush() error
+
 	// RecvMsg receives a message.  It blocks until the message is
 	// received.  On error, the pipe is closed and nil is returned.
 	RecvMsg() *Message

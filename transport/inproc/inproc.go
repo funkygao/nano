@@ -72,6 +72,10 @@ func (p *inproc) RecvMsg() (*nano.Message, error) {
 	}
 }
 
+func (p *inproc) Flush() error {
+	return nil
+}
+
 func (p *inproc) SendMsg(m *nano.Message) error {
 	if p.peer == nil {
 		return nano.ErrClosed

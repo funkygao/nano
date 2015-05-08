@@ -15,6 +15,9 @@ type Pipe interface {
 	// list.
 	SendMsg(*Message) error
 
+	// Flush sends all buffered messages.
+	Flush() error
+
 	// RecvMsg receives a complete message.  In the event that either a
 	// complete message could not be received, an error is returned
 	// to the caller and the Pipe is closed.

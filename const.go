@@ -11,6 +11,7 @@ const (
 	defaultChanLen = 128
 
 	// defaultBufferSize is the default bufio buffer size.
+	// TODO add to option
 	defaultBufferSize = 16 * 1024
 
 	// only for server/listener side
