@@ -144,10 +144,10 @@ const (
 	// loops in the topology.  The default is protocol specific.
 	OptionTtl = "TTL"
 
-	// OptionDisableHandshake is used to disable handshake when two endpoints
+	// OptionNoHandshake is used to disable handshake when two endpoints
 	// are connected. Note that this will not be compliant with SP.
 	// Value is bool, default is false.
-	OptionDisableHandshake = "NO-HANDSHAKE"
+	OptionNoHandshake = "NO-HANDSHAKE"
 
 	// OptionSnappy is used to compress/decompress all messages IO
 	// stream with google snappy.

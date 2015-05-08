@@ -23,7 +23,7 @@ func dieIfErr(err error) {
 func request(addr string) {
 	sock := reqrep.NewReqSocket()
 	transport.AddAllOptions(sock, nano.OptionSnappy, true,
-		nano.OptionDisableHandshake, true)
+		nano.OptionNoHandshake, true)
 	dieIfErr(sock.SetOption(nano.OptionReadQLen, 4<<10)) // must be before Dial
 	dieIfErr(sock.SetOption(nano.OptionWriteQLen, 4<<10))
 	dieIfErr(sock.Dial(addr))
@@ -46,7 +46,7 @@ func request(addr string) {
 func reply(addr string) {
 	sock := reqrep.NewRepSocket()
 	transport.AddAllOptions(sock, nano.OptionSnappy, true,
-		nano.OptionDisableHandshake, true)
+		nano.OptionNoHandshake, true)
 	dieIfErr(sock.Listen(addr))
 	log.Printf("listening on %s", addr)
 

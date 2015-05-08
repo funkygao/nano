@@ -53,9 +53,9 @@ func (this *tcpTransport) NewListener(addr string, proto nano.Protocol) (nano.Pi
 }
 
 var validOpts = map[string]bool{
-	nano.OptionDisableHandshake: true,
-	nano.OptionDeflate:          true,
-	nano.OptionSnappy:           true,
+	nano.OptionNoHandshake: true,
+	nano.OptionDeflate:     true,
+	nano.OptionSnappy:      true,
 }
 
 // NewTransport allocates a new TCP Transport.

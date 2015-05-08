@@ -49,7 +49,7 @@ func NewConnPipe(conn net.Conn, proto Protocol, props ...interface{}) (Pipe, err
 
 	Debugf("proto:%s, props:%v", proto.Name(), this.props)
 
-	v, err := this.GetProp(OptionDisableHandshake)
+	v, err := this.GetProp(OptionNoHandshake)
 	if err != nil || !v.(bool) {
 		// handshake will not use snappy|deflate
 		if err := this.handshake(); err != nil {
@@ -264,7 +264,7 @@ func NewConnPipeIPC(conn net.Conn, proto Protocol, props ...interface{}) (Pipe, 
 		this.props[props[i].(string)] = props[i+1]
 	}
 
-	v, err := this.GetProp(OptionDisableHandshake)
+	v, err := this.GetProp(OptionNoHandshake)
 	if err != nil || !v.(bool) {
 		// handshake will not use snappy|deflate
 		if err := this.handshake(); err != nil {

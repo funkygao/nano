@@ -147,9 +147,9 @@ func (t *ipcTran) NewListener(addr string, proto nano.Protocol) (nano.PipeListen
 }
 
 var validOpts = map[string]bool{
-	nano.OptionDisableHandshake: true,
-	nano.OptionDeflate:          true,
-	nano.OptionSnappy:           true,
+	nano.OptionNoHandshake: true,
+	nano.OptionDeflate:     true,
+	nano.OptionSnappy:      true,
 }
 
 // NewTransport allocates a new IPC transport.
