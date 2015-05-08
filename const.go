@@ -13,6 +13,9 @@ const (
 	// defaultBufferSize is the default bufio buffer size.
 	defaultBufferSize = 16 * 1024
 
+	// only for server/listener side
+	defaultServerEpsCap = 100 << 10
+
 	defaultRedialTime = time.Millisecond * 100
 	defaultRedialMax  = time.Minute
 	defaultLingerTime = time.Second

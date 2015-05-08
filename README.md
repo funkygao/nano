@@ -51,7 +51,7 @@ Currently supported protocols:
 
 #### Send
 
-        Application
+        Application, create msg
             | 
             V 
         Socket.SendMsg

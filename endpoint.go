@@ -44,6 +44,7 @@ type pipeEndpoint struct {
 	sync.Mutex
 }
 
+// TODO use sync.Pool
 func newPipeEndpoint(connPipe Pipe, d *dialer, l *listener) *pipeEndpoint {
 	this := &pipeEndpoint{
 		pipe:      connPipe,

@@ -35,8 +35,8 @@ type socket struct {
 	// a listener can accept multiple inbound connections(endpoints);
 	// a dialer can dial multiple servers(endpoints).
 	//
-	// we store pipes so that socket close will gracefully close all endpoints.
-	pipes []*pipeEndpoint
+	// we store eps so that socket close will gracefully close all endpoints.
+	eps []*pipeEndpoint
 
 	sendHook ProtocolSendHook // hook on sendMsg
 	recvHook ProtocolRecvHook // hook on recvMsg
@@ -60,7 +60,7 @@ func MakeSocket(proto Protocol) Socket {
 		redialMax:  defaultRedialMax,  // 1m
 		linger:     defaultLingerTime, // 1s
 
-		pipes: make([]*pipeEndpoint, 0), // when listen, will reset cap
+		eps: make([]*pipeEndpoint, 0), // when listen, will reset cap
 	}
 
 	if hook, ok := proto.(ProtocolRecvHook); ok {
@@ -159,9 +159,9 @@ func (sock *socket) NewListener(addr string, options map[string]interface{}) (Li
 		}
 	}
 
-	// avoid problem of listener constantly grows pipes when many
-	// concurrent conn dials in
-	sock.pipes = make([]*pipeEndpoint, 0, defaultServerPipesCap)
+	// avoid problem of listener constantly grows eps when many
+	// concurrent conns dial in
+	sock.eps = make([]*pipeEndpoint, 0, defaultServerEpsCap)
 
 	return l, nil
 }
@@ -226,18 +226,18 @@ func (sock *socket) Close() error {
 	sock.closing = true
 	close(sock.closeChan) // broadcast
 
-	pipes := append([]*pipeEndpoint{}, sock.pipes...)
+	eps := append([]*pipeEndpoint{}, sock.eps...)
 	sock.Unlock()
 
 	// A second drain, just to be sure.  (We could have had device or
 	// forwarded messages arrive since the last one.)
 	DrainChannel(sock.sendChan, expire)
 
-	// And tell the protocol to shutdown and drain its pipes too.
+	// And tell the protocol to shutdown and drain its eps too.
 	sock.proto.Shutdown(expire)
 
-	Debugf("closing all pipes: %#v", pipes)
-	for _, p := range pipes {
+	Debugf("closing all eps: %#v", eps)
+	for _, p := range eps {
 		p.Close()
 	}
 
@@ -256,13 +256,14 @@ func (sock *socket) SendMsg(msg *Message) error {
 	Debugf("msg: %+v", *msg)
 
 	if sock.sendHook != nil {
-		Debugf("sendHook: %+v", *msg)
+		Debugf("before sendHook: %+v", *msg)
 		if ok := sock.sendHook.SendHook(msg); !ok {
-			// just drop it silently
+			// silently drop
+			msg.Free()
 			Debugf("hook fail: %+v", *msg)
-			msg.Free() // safe to recycle
 			return nil
 		}
+		Debugf("after sendHook: %+v", *msg)
 	}
 
 	select {
@@ -273,7 +274,7 @@ func (sock *socket) SendMsg(msg *Message) error {
 		return ErrClosed
 
 	case sock.sendChan <- msg:
-		Debugf("%+v %+v", msg, sock.sendChan)
+		Debugf("sent to sendChan: %+v %+v", msg, sock.sendChan)
 		return nil
 	}
 }
@@ -300,6 +301,7 @@ func (sock *socket) RecvMsg() (*Message, error) {
 			Debugf("recv msg: %+v", *msg)
 
 			if sock.recvHook != nil {
+				Debugf("before recvHook: %+v", *msg)
 				if ok := sock.recvHook.RecvHook(msg); ok {
 					Debugf("after RecvHook: %+v", *msg)
 					return msg, nil
@@ -435,25 +437,26 @@ func (sock *socket) SetPortHook(newhook PortHook) PortHook {
 }
 
 func (sock *socket) addPipe(connPipe Pipe, d *dialer, l *listener) *pipeEndpoint {
-	pe := newPipeEndpoint(connPipe, d, l)
+	p := newPipeEndpoint(connPipe, d, l)
 	sock.Lock()
 	if fn := sock.portHook; fn != nil {
 		sock.Unlock()
-		if !fn(PortActionAdd, pe) {
-			pe.Close()
+		if !fn(PortActionAdd, p) {
+			p.Close()
 			return nil
 		}
 		sock.Lock()
 	}
-	pe.sock = sock
-	pe.index = len(sock.pipes)
-	sock.pipes = append(sock.pipes, pe)
+	p.sock = sock
+	p.index = len(sock.eps)
+	sock.eps = append(sock.eps, p)
 	sock.Unlock()
 
-	// let Protocol register this endpoint
-	sock.proto.AddEndpoint(pe)
+	Debugf("%#v", *p)
 
-	return pe
+	sock.proto.AddEndpoint(p)
+
+	return p
 }
 
 func (sock *socket) removePipe(p *pipeEndpoint) {
@@ -463,11 +466,11 @@ func (sock *socket) removePipe(p *pipeEndpoint) {
 
 	sock.Lock()
 	if p.index >= 0 {
-		// switch between p and pipes slice last item
-		sock.pipes[p.index] = sock.pipes[len(sock.pipes)-1]
-		sock.pipes[p.index].index = p.index
-		sock.pipes = sock.pipes[:len(sock.pipes)-1]
-		p.index = -1
+		// switch between p and eps slice last item
+		sock.eps[p.index] = sock.eps[len(sock.eps)-1]
+		sock.eps[p.index].index = p.index
+		sock.eps = sock.eps[:len(sock.eps)-1]
+		p.index = -1 // for safety
 	}
 	sock.Unlock()
 }

@@ -4,6 +4,7 @@
 examples/pair/pair
 examples/pipeline/bench
 examples/pubsub/pubsub
+examples/tlstcp/tlstcp
 examples/reqrep/reqrep
 examples/api/api
 examples/bus/bus
