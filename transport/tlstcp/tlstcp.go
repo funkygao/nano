@@ -182,6 +182,6 @@ func (t *tlsTran) NewListener(addr string, proto nano.Protocol) (nano.PipeListen
 }
 
 // NewTransport allocates a new inproc transport.
-func NewTransport() nano.Transport {
+func NewTransport(opts ...interface{}) nano.Transport {
 	return &tlsTran{}
 }

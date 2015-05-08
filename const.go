@@ -146,14 +146,17 @@ const (
 
 	// OptionDisableHandshake is used to disable handshake when two endpoints
 	// are connected. Note that this will not be compliant with SP.
+	// Value is bool, default is false.
 	OptionDisableHandshake = "NO-HANDSHAKE"
 
-	// OptionSnappy is used to use google snappy compress/decompress all
-	// messages IO stream.
+	// OptionSnappy is used to compress/decompress all messages IO
+	// stream with google snappy.
+	// Value is bool, default is false.
 	OptionSnappy = "SNAPPY"
 
-	// OptionDeflate is used to use flate compress/decompress messsage
-	// IO streams.
+	// OptionDeflate is used to compress/decompress messsage IO streams
+	// with deflate.
+	// Value is int, deflate level, default is 0.
 	OptionDeflate = "FLATE"
 )
 

@@ -8,6 +8,7 @@ import (
 
 // listener implements the nano.PipeListener interface.
 type listener struct {
+	t        *tcpTransport
 	addr     *net.TCPAddr
 	proto    nano.Protocol
 	listener *net.TCPListener
@@ -31,7 +32,11 @@ func (this *listener) Accept() (nano.Pipe, error) {
 		return nil, err
 	}
 
-	return nano.NewConnPipe(conn, this.proto)
+	props := make([]interface{}, 0)
+	for n, v := range this.t.opts {
+		props = append(props, n, v)
+	}
+	return nano.NewConnPipe(conn, this.proto, props...)
 }
 
 func (this *listener) Listen() (err error) {

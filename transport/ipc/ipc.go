@@ -133,6 +133,6 @@ func (t *ipcTran) NewListener(addr string, proto nano.Protocol) (nano.PipeListen
 }
 
 // NewTransport allocates a new IPC transport.
-func NewTransport() nano.Transport {
+func NewTransport(opts ...interface{}) nano.Transport {
 	return &ipcTran{}
 }

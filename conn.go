@@ -33,11 +33,9 @@ type connPipe struct {
 // Stream oriented transports can utilize this to implement a Transport.
 func NewConnPipe(conn net.Conn, proto Protocol, props ...interface{}) (Pipe, error) {
 	this := &connPipe{
-		conn:   conn,
-		reader: bufio.NewReaderSize(conn, defaultBufferSize),
-		writer: bufio.NewWriterSize(conn, defaultBufferSize),
-		proto:  proto,
-		props:  make(map[string]interface{}),
+		conn:  conn,
+		proto: proto,
+		props: make(map[string]interface{}),
 	}
 
 	this.props[PropLocalAddr] = conn.LocalAddr()
@@ -51,9 +49,24 @@ func NewConnPipe(conn net.Conn, proto Protocol, props ...interface{}) (Pipe, err
 
 	Debugf("proto:%s, props:%v", proto.Name(), this.props)
 
-	if proto.Handshake() {
+	v, err := this.GetProp(OptionDisableHandshake)
+	if err != nil || !v.(bool) {
+		// handshake will not use snappy|deflate
 		if err := this.handshake(); err != nil {
 			return nil, err
+		}
+	}
+
+	v, err = this.GetProp(OptionSnappy)
+	if err == nil && v.(bool) {
+		this.upgradeSnappy()
+	} else {
+		v, err = this.GetProp(OptionDeflate)
+		if err == nil {
+			this.upgradeDeflate(v.(int))
+		} else {
+			this.reader = bufio.NewReaderSize(conn, defaultBufferSize)
+			this.writer = bufio.NewWriterSize(conn, defaultBufferSize)
 		}
 	}
 
