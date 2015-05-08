@@ -2,10 +2,13 @@ package nano
 
 import (
 	"bufio"
+	"compress/flate"
 	"encoding/binary"
 	"io"
 	"net"
 	"sync"
+
+	"github.com/mreiferson/go-snappystream"
 )
 
 // connPipe implements the Pipe interface on top of net.Conn.
@@ -30,11 +33,9 @@ type connPipe struct {
 // Stream oriented transports can utilize this to implement a Transport.
 func NewConnPipe(conn net.Conn, proto Protocol, props ...interface{}) (Pipe, error) {
 	this := &connPipe{
-		conn:   conn,
-		reader: bufio.NewReaderSize(conn, defaultBufferSize),
-		writer: bufio.NewWriterSize(conn, defaultBufferSize),
-		proto:  proto,
-		props:  make(map[string]interface{}),
+		conn:  conn,
+		proto: proto,
+		props: make(map[string]interface{}),
 	}
 
 	this.props[PropLocalAddr] = conn.LocalAddr()
@@ -48,9 +49,24 @@ func NewConnPipe(conn net.Conn, proto Protocol, props ...interface{}) (Pipe, err
 
 	Debugf("proto:%s, props:%v", proto.Name(), this.props)
 
-	if proto.Handshake() {
+	v, err := this.GetProp(OptionNoHandshake)
+	if err != nil || !v.(bool) {
+		// handshake will not use snappy|deflate
 		if err := this.handshake(); err != nil {
 			return nil, err
+		}
+	}
+
+	v, err = this.GetProp(OptionSnappy)
+	if err == nil && v.(bool) {
+		this.upgradeSnappy()
+	} else {
+		v, err = this.GetProp(OptionDeflate)
+		if err == nil {
+			this.upgradeDeflate(v.(int))
+		} else {
+			this.reader = bufio.NewReaderSize(conn, defaultBufferSize)
+			this.writer = bufio.NewWriterSize(conn, defaultBufferSize)
 		}
 	}
 
@@ -100,6 +116,20 @@ func (this *connPipe) handshake() error {
 
 	this.open = true
 	return nil
+}
+
+func (this *connPipe) upgradeSnappy() {
+	r := snappystream.NewReader(this.conn, snappystream.SkipVerifyChecksum)
+	w := snappystream.NewWriter(this.conn)
+	this.reader = bufio.NewReaderSize(r, defaultBufferSize)
+	this.writer = bufio.NewWriterSize(w, defaultBufferSize)
+}
+
+func (this *connPipe) upgradeDeflate(level int) {
+	r := flate.NewReader(this.conn)
+	w, _ := flate.NewWriter(this.conn, level)
+	this.reader = bufio.NewReaderSize(r, defaultBufferSize)
+	this.writer = bufio.NewWriterSize(w, defaultBufferSize)
 }
 
 // RecvMsg implements the Pipe RecvMsg method.  The message received is expected as
@@ -234,8 +264,25 @@ func NewConnPipeIPC(conn net.Conn, proto Protocol, props ...interface{}) (Pipe, 
 		this.props[props[i].(string)] = props[i+1]
 	}
 
-	if err := this.handshake(); err != nil {
-		return nil, err
+	v, err := this.GetProp(OptionNoHandshake)
+	if err != nil || !v.(bool) {
+		// handshake will not use snappy|deflate
+		if err := this.handshake(); err != nil {
+			return nil, err
+		}
+	}
+
+	v, err = this.GetProp(OptionSnappy)
+	if err == nil && v.(bool) {
+		this.upgradeSnappy()
+	} else {
+		v, err = this.GetProp(OptionDeflate)
+		if err == nil {
+			this.upgradeDeflate(v.(int))
+		} else {
+			this.reader = bufio.NewReaderSize(conn, defaultBufferSize)
+			this.writer = bufio.NewWriterSize(conn, defaultBufferSize)
+		}
 	}
 
 	return this, nil

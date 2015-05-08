@@ -22,14 +22,15 @@ func dieIfErr(err error) {
 
 func request(addr string) {
 	sock := reqrep.NewReqSocket()
-	transport.AddAll(sock)
+	transport.AddAllOptions(sock, nano.OptionSnappy, true,
+		nano.OptionNoHandshake, true)
 	dieIfErr(sock.SetOption(nano.OptionReadQLen, 4<<10)) // must be before Dial
 	dieIfErr(sock.SetOption(nano.OptionWriteQLen, 4<<10))
 	dieIfErr(sock.Dial(addr))
 	dieIfErr(sock.SetOption(nano.OptionSendDeadline, time.Second))
 
 	for i := 0; i < 2; i++ {
-		err := sock.Send([]byte(strings.Repeat("X", 10)))
+		err := sock.Send([]byte(strings.Repeat("X", 100)))
 		dieIfErr(err)
 
 		msg, err := sock.Recv()
@@ -44,7 +45,8 @@ func request(addr string) {
 
 func reply(addr string) {
 	sock := reqrep.NewRepSocket()
-	transport.AddAll(sock)
+	transport.AddAllOptions(sock, nano.OptionSnappy, true,
+		nano.OptionNoHandshake, true)
 	dieIfErr(sock.Listen(addr))
 	log.Printf("listening on %s", addr)
 

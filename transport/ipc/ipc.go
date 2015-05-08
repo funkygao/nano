@@ -28,6 +28,7 @@ func (o options) set(string, interface{}) error {
 }
 
 type dialer struct {
+	t     *ipcTran
 	addr  *net.UnixAddr
 	proto nano.Protocol
 	opts  options
@@ -39,7 +40,12 @@ func (d *dialer) Dial() (nano.Pipe, error) {
 	if err != nil {
 		return nil, err
 	}
-	return nano.NewConnPipeIPC(conn, d.proto)
+
+	props := make([]interface{}, 0)
+	for n, v := range d.t.opts {
+		props = append(props, n, v)
+	}
+	return nano.NewConnPipeIPC(conn, d.proto, props...)
 }
 
 // SetOption implements a stub PipeDialer SetOption method.
@@ -53,6 +59,7 @@ func (d *dialer) GetOption(n string) (interface{}, error) {
 }
 
 type listener struct {
+	t        *ipcTran
 	addr     *net.UnixAddr
 	proto    nano.Protocol
 	listener *net.UnixListener
@@ -75,7 +82,12 @@ func (l *listener) Accept() (nano.Pipe, error) {
 	if err != nil {
 		return nil, err
 	}
-	return nano.NewConnPipeIPC(conn, l.proto)
+
+	props := make([]interface{}, 0)
+	for n, v := range l.t.opts {
+		props = append(props, n, v)
+	}
+	return nano.NewConnPipeIPC(conn, l.proto, props...)
 }
 
 // Close implements the PipeListener Close method.
@@ -94,7 +106,9 @@ func (l *listener) GetOption(n string) (interface{}, error) {
 	return l.opts.get(n)
 }
 
-type ipcTran struct{}
+type ipcTran struct {
+	opts map[string]interface{}
+}
 
 // Scheme implements the Transport Scheme method.
 func (t *ipcTran) Scheme() string {
@@ -109,7 +123,7 @@ func (t *ipcTran) NewDialer(addr string, proto nano.Protocol) (nano.PipeDialer, 
 		return nil, err
 	}
 
-	d := &dialer{proto: proto, opts: nil}
+	d := &dialer{t: t, proto: proto, opts: nil}
 	if d.addr, err = net.ResolveUnixAddr("unix", addr); err != nil {
 		return nil, err
 	}
@@ -119,7 +133,7 @@ func (t *ipcTran) NewDialer(addr string, proto nano.Protocol) (nano.PipeDialer, 
 // NewListener implements the Transport NewListener method.
 func (t *ipcTran) NewListener(addr string, proto nano.Protocol) (nano.PipeListener, error) {
 	var err error
-	l := &listener{proto: proto}
+	l := &listener{t: t, proto: proto}
 
 	if addr, err = nano.StripScheme(t, addr); err != nil {
 		return nil, err
@@ -132,7 +146,27 @@ func (t *ipcTran) NewListener(addr string, proto nano.Protocol) (nano.PipeListen
 	return l, nil
 }
 
+var validOpts = map[string]bool{
+	nano.OptionNoHandshake: true,
+	nano.OptionDeflate:     true,
+	nano.OptionSnappy:      true,
+}
+
 // NewTransport allocates a new IPC transport.
-func NewTransport() nano.Transport {
-	return &ipcTran{}
+func NewTransport(opts ...interface{}) nano.Transport {
+	t := &ipcTran{opts: make(map[string]interface{})}
+	if len(opts)%2 != 0 {
+		return nil
+	}
+	for i := 0; i+1 < len(opts); i += 2 {
+		name := opts[i].(string)
+		if _, present := validOpts[name]; !present {
+			// invalid option
+			return nil
+		}
+
+		t.opts[name] = opts[i+1]
+	}
+
+	return t
 }

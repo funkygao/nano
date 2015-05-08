@@ -85,10 +85,6 @@ func (*sub) PeerName() string {
 	return "pub"
 }
 
-func (*sub) Handshake() bool {
-	return true
-}
-
 func (s *sub) SetOption(name string, value interface{}) error {
 	s.Lock()
 	defer s.Unlock()

@@ -64,10 +64,6 @@ func (*push) PeerName() string {
 	return "pull"
 }
 
-func (*push) Handshake() bool {
-	return true
-}
-
 func (this *push) Shutdown(expire time.Time) {
 	this.w.WaitAbsTimeout(expire)
 }

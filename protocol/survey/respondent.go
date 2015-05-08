@@ -222,10 +222,6 @@ func (*resp) PeerName() string {
 	return "surveyor"
 }
 
-func (*resp) Handshake() bool {
-	return true
-}
-
 func (x *resp) SetOption(name string, v interface{}) error {
 	var ok bool
 	switch name {
