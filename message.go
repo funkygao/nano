@@ -40,12 +40,12 @@ var messagePool = []messageSlab{
 // be recycled without engaging GC.  This can have rather substantial
 // benefits for performance.
 func (this *Message) Free() (recycled bool) {
-	if refCount := atomic.AddInt32(&this.refCount, -1); refCount > 0 {
-		return
+	refCount := atomic.AddInt32(&this.refCount, -1)
+	if refCount > 0 {
+		return false
+	} else if refCount < 0 {
+		return true
 	}
-
-	// refCount <= 0
-	recycled = true
 
 	// safe to put back message pool for later reuse
 	var ch chan *Message
@@ -59,9 +59,9 @@ func (this *Message) Free() (recycled bool) {
 	select {
 	case ch <- this:
 	default:
-		// message pool is full, just discard it
+		// message pool is full, silently drop
 	}
-	return
+	return true
 }
 
 // Dup creates a "duplicate" message.  What it really does is simply
