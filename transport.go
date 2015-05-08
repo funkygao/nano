@@ -69,6 +69,29 @@ type PipeDialer interface {
 	GetOption(name string) (value interface{}, err error)
 }
 
+// Dialer is an interface to the underlying dialer for a transport
+// and address.
+type Dialer interface {
+
+	// Close closes the dialer, and removes it from any active socket.
+	// Further operations on the Dialer will return ErrClosed.
+	Close() error
+
+	// Dial starts connecting to the address.  If a connection fails,
+	// it will restart.
+	Dial() error
+
+	// Address returns the full URL of remote address.
+	Address() string
+
+	// SetOption sets an option on the Dialer. Setting options
+	// can only be done before Dial() has been called.
+	SetOption(name string, value interface{}) error
+
+	// GetOption gets an option value from the Dialer.
+	GetOption(name string) (interface{}, error)
+}
+
 // PipeListener represents the server side of a connection.  Servers respond
 // to a connection request from clients.
 //
@@ -103,24 +126,6 @@ type PipeListener interface {
 	GetOption(name string) (value interface{}, err error)
 }
 
-// Transport is the interface for transport suppliers to implement.
-type Transport interface {
-
-	// Scheme returns a string used as the prefix for SP "addresses".
-	// This is similar to a URI scheme.  For example, schemes can be
-	// "tcp" (for "tcp://xxx..."), "ipc", "inproc", etc.
-	Scheme() string
-
-	// NewDialer creates a new Dialer for this Transport.
-	NewDialer(url string, protocol Protocol) (PipeDialer, error)
-
-	// NewListener creates a new PipeListener for this Transport.
-	// This generally also arranges for an OS-level file descriptor to be
-	// opened, and bound to the the given address, as well as establishing
-	// any "listen" backlog.
-	NewListener(url string, protocol Protocol) (PipeListener, error)
-}
-
 // Listener is an interface to the underlying listener for a transport
 // and address.
 type Listener interface {
@@ -143,25 +148,20 @@ type Listener interface {
 	GetOption(name string) (interface{}, error)
 }
 
-// Dialer is an interface to the underlying dialer for a transport
-// and address.
-type Dialer interface {
+// Transport is the interface for transport suppliers to implement.
+type Transport interface {
 
-	// Close closes the dialer, and removes it from any active socket.
-	// Further operations on the Dialer will return ErrClosed.
-	Close() error
+	// Scheme returns a string used as the prefix for SP "addresses".
+	// This is similar to a URI scheme.  For example, schemes can be
+	// "tcp" (for "tcp://xxx..."), "ipc", "inproc", etc.
+	Scheme() string
 
-	// Dial starts connecting to the address.  If a connection fails,
-	// it will restart.
-	Dial() error
+	// NewDialer creates a new Dialer for this Transport.
+	NewDialer(url string, protocol Protocol) (PipeDialer, error)
 
-	// Address returns the full URL of remote address.
-	Address() string
-
-	// SetOption sets an option on the Dialer. Setting options
-	// can only be done before Dial() has been called.
-	SetOption(name string, value interface{}) error
-
-	// GetOption gets an option value from the Dialer.
-	GetOption(name string) (interface{}, error)
+	// NewListener creates a new PipeListener for this Transport.
+	// This generally also arranges for an OS-level file descriptor to be
+	// opened, and bound to the the given address, as well as establishing
+	// any "listen" backlog.
+	NewListener(url string, protocol Protocol) (PipeListener, error)
 }
