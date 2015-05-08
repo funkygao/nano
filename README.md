@@ -49,12 +49,43 @@ Currently supported protocols:
 
 ### Internals
 
-#### Data Flow
+#### Send
 
-    protocol.NewSocket -> nano.MakeSocket(proto) -> protocol.Init
+        Application
+            | 
+            V 
+        Socket.SendMsg
+            | 
+        ProtocolSendHook.SendHook
+            | 
+            | ProtocolSocket.SendChannel
+            V 
+        Protocol
+            |
+            | sender thread loop
+            V
+        EndPoint.SendMsg
+            |
+        Pipe.SendMsg, then msg.Free
+           
 
-    sock.SendMsg -> sock.sendChan -> protocol.senderGoRoutine -> protocol.ep.SendMsg -> connPipe.SendMsg
+#### Recv
 
+        Application, then msg.Free
+            | 
+            V 
+        Socket.RecvMsg
+            ^ 
+            | ProtocolSocket.RecvChannel
+            | 
+        Protocol
+            ^
+            | receiver thread loop
+            |
+        EndPoint.RecvMsg
+            |
+        Pipe.RecvMsg, create msg
+           
 #### Reducing GC Presure
 
 #### Timers
