@@ -1,7 +1,8 @@
 TODO
 ====
 
-- [ ] sync.Pool and bytes.Buffer
+- [X] sync.Pool and bytes.Buffer
+- [ ] benchmark shows mem leakage
 - [ ] device use sendfile for zero copy
 - [ ] newPipeEndpoint will be recycled in pool
 - [ ] tls demo

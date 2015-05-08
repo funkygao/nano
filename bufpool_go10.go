@@ -6,8 +6,8 @@ import (
 	"bytes"
 )
 
-func bufferPoolGet() *bytes.Buffer {
+func BufferPoolGet() *bytes.Buffer {
 	return &bytes.Buffer{}
 }
 
-func bufferPoolPut(b *bytes.Buffer) {}
+func BufferPoolPut(b *bytes.Buffer) {}

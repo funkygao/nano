@@ -2,6 +2,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"strings"
@@ -57,8 +58,11 @@ func runPull(seq int) {
 		panic(err)
 	}
 
+	var buf *bytes.Buffer
 	for {
-		_, err := sock.Recv()
+		buf = nano.BufferPoolGet()
+		_, err := sock.XRecv(buf)
+		nano.BufferPoolPut(buf)
 		if err != nil {
 			fmt.Println(err)
 			break

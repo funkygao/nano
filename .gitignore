@@ -2,7 +2,7 @@
 .swp
 
 examples/pair/pair
-examples/pipeline/bench
+examples/benchmark/benchmark
 examples/pubsub/pubsub
 examples/tlstcp/tlstcp
 examples/reqrep/reqrep
