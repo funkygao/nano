@@ -72,8 +72,8 @@ Currently supported protocols:
 #### Recv
 
         Application, then msg.Free
+            ^ 
             | 
-            V 
         Socket.RecvMsg
             ^ 
             | ProtocolSocket.RecvChannel
