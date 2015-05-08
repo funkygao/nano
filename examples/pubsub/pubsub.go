@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/funkygao/nano"
 	"github.com/funkygao/nano/protocol/pubsub"
@@ -35,8 +36,12 @@ func doPub() {
 	dieIfErr(sock.Listen(addr))
 
 	body := []byte(strings.Repeat("X", 100))
+	var i int64
 	for {
+		i++
+		fmt.Println("sending: ", i, string(body))
 		dieIfErr(sock.Send(body))
+		time.Sleep(time.Microsecond)
 	}
 
 }
@@ -48,13 +53,14 @@ func doSub() {
 	// Empty byte array effectively subscribes to everything
 	dieIfErr(sock.SetOption(nano.OptionSubscribe, []byte("")))
 
+	fmt.Println("ready")
 	var i int64
 	for {
 		data, err := sock.Recv()
 		dieIfErr(err)
 
 		i++
-		fmt.Println(i, string(data))
+		fmt.Println(i, string(data), len(data))
 	}
 
 }

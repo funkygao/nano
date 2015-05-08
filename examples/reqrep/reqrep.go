@@ -61,7 +61,7 @@ func reply(addr string) {
 
 func usage() {
 	log.Printf("Usage: %s <rep|req> <url>", os.Args[0])
-	log.Println("url example: tcp://127.0.0.1:1234  ipc://x.sock  inproc://test  tlstcp://127.0.0.1:1234")
+	log.Println("url example: tcp://127.0.0.1:1234  ipc://x.sock  inproc://test  tls+tcp://127.0.0.1:1234")
 	os.Exit(0)
 }
 
