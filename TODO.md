@@ -2,6 +2,7 @@ TODO
 ====
 
 - [X] sync.Pool and bytes.Buffer
+- [X] optional handshake
 - [ ] benchmark shows mem leakage
 - [X] batch the framed msg to increase throughput
   protocol will have to manually call ep.Flush
@@ -17,4 +18,3 @@ TODO
   examples/pipeline
 - [ ] msg copy between transports
 - [ ] Asynchronous DNS queries
-- [ ] optional handshake

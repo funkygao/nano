@@ -176,6 +176,10 @@ func (*star) PeerName() string {
 	return "star"
 }
 
+func (*star) Handshake() bool {
+	return true
+}
+
 func (x *star) SetOption(name string, v interface{}) error {
 	var ok bool
 	switch name {

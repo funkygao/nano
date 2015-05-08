@@ -139,10 +139,11 @@ func (r *req) sender(ep nano.Endpoint) {
 		}
 
 		nano.Debugf("sending: %+v ep:%T", *m, ep)
-		if ep.SendMsg(m) != nil {
+		if ep.SendMsg(m) != nil || ep.Flush() != nil {
 			r.resendMsgChan <- m
 			break
 		}
+
 	}
 }
 
@@ -165,6 +166,10 @@ func (*req) Name() string {
 
 func (*req) PeerName() string {
 	return "rep"
+}
+
+func (*req) Handshake() bool {
+	return true
 }
 
 func (r *req) SendHook(m *nano.Message) bool {

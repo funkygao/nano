@@ -48,8 +48,10 @@ func NewConnPipe(conn net.Conn, proto Protocol, props ...interface{}) (Pipe, err
 
 	Debugf("proto:%s, props:%v", proto.Name(), this.props)
 
-	if err := this.handshake(); err != nil {
-		return nil, err
+	if proto.Handshake() {
+		if err := this.handshake(); err != nil {
+			return nil, err
+		}
 	}
 
 	return this, nil

@@ -162,6 +162,10 @@ func (*surveyor) PeerName() string {
 	return "respondent"
 }
 
+func (*surveyor) Handshake() bool {
+	return true
+}
+
 func (x *surveyor) SendHook(m *nano.Message) bool {
 
 	if x.raw {

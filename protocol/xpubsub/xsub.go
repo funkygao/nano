@@ -1,4 +1,4 @@
-package pubsub
+package xpubsub
 
 import (
 	"time"
@@ -34,19 +34,23 @@ func (this *xsub) GetOption(name string) (interface{}, error) {
 	return nil, nil
 }
 
-func (this *xsub) Name() string {
+func (*xsub) Name() string {
 	return "sub"
 }
 
-func (this *xsub) PeerName() string {
+func (*xsub) PeerName() string {
 	return "pub"
 }
 
-func (this *xsub) Number() uint16 {
+func (*xsub) Handshake() bool {
+	return true
+}
+
+func (*xsub) Number() uint16 {
 	return nano.ProtoSub
 }
 
-func (this *xsub) PeerNumber() uint16 {
+func (*xsub) PeerNumber() uint16 {
 	return nano.ProtoPub
 }
 

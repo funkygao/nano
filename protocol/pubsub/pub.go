@@ -141,6 +141,10 @@ func (*pub) PeerName() string {
 	return "sub"
 }
 
+func (*pub) Handshake() bool {
+	return true
+}
+
 func (p *pub) SetOption(name string, v interface{}) error {
 	var ok bool
 	switch name {

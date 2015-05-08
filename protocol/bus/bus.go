@@ -183,6 +183,10 @@ func (*bus) PeerName() string {
 	return "bus"
 }
 
+func (*bus) Handshake() bool {
+	return true
+}
+
 func (x *bus) RecvHook(m *nano.Message) bool {
 	if !x.raw && len(m.Header) >= 4 {
 		m.Header = m.Header[4:]

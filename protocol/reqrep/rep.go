@@ -22,7 +22,7 @@ func (pe *repEp) sender() {
 			break
 		}
 
-		if pe.ep.SendMsg(m) != nil {
+		if pe.ep.SendMsg(m) != nil || pe.ep.Flush() != nil {
 			m.Free()
 			break
 		}
@@ -194,6 +194,10 @@ func (*rep) Name() string {
 
 func (*rep) PeerName() string {
 	return "req"
+}
+
+func (*rep) Handshake() bool {
+	return true
 }
 
 func (r *rep) Shutdown(expire time.Time) {

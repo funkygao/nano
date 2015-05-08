@@ -60,6 +60,10 @@ func (*pull) PeerName() string {
 	return "push"
 }
 
+func (*pull) Handshake() bool {
+	return true
+}
+
 func (*pull) SendHook(msg *nano.Message) bool {
 	return false
 }
