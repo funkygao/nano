@@ -6,16 +6,18 @@ import (
 	"time"
 )
 
+type EndpointId uint32
+
 var endpointPool struct {
-	byid       map[uint32]*pipeEndpoint
-	nextidChan chan uint32
+	byid       map[EndpointId]*pipeEndpoint
+	nextidChan chan EndpointId
 
 	sync.Mutex
 }
 
 func endpointIdGenerator() {
-	var nextid = uint32(rand.NewSource(time.Now().UnixNano()).Int63())
-	var id uint32
+	var nextid = EndpointId(rand.NewSource(time.Now().UnixNano()).Int63())
+	var id EndpointId
 	for {
 		id = nextid & 0x7fffffff // will never conflict with REQ.id
 		nextid++
@@ -38,7 +40,7 @@ type pipeEndpoint struct {
 
 	closing   bool          // true if we were closed
 	closeChan chan struct{} // notify dialer to redial
-	id        uint32
+	id        EndpointId
 	index     int
 
 	sync.Mutex
@@ -68,7 +70,7 @@ func newPipeEndpoint(connPipe Pipe, d *dialer, l *listener) *pipeEndpoint {
 	return this
 }
 
-func (this *pipeEndpoint) Id() uint32 {
+func (this *pipeEndpoint) Id() EndpointId {
 	return this.id
 }
 

@@ -34,7 +34,7 @@ func (pe *pubEp) peerSender() {
 // pub will listen and accept subs.
 type pub struct {
 	sock   nano.ProtocolSocket
-	eps    map[uint32]*pubEp // endpoints
+	eps    map[nano.EndpointId]*pubEp // endpoints
 	raw    bool
 	waiter nano.Waiter
 
@@ -43,7 +43,7 @@ type pub struct {
 
 func (p *pub) Init(sock nano.ProtocolSocket) {
 	p.sock = sock
-	p.eps = make(map[uint32]*pubEp)
+	p.eps = make(map[nano.EndpointId]*pubEp)
 
 	// send only
 	p.sock.SetRecvError(nano.ErrProtoOp)
@@ -115,7 +115,7 @@ func (p *pub) Shutdown(expire time.Time) {
 
 	p.Lock()
 	peers := p.eps
-	p.eps = make(map[uint32]*pubEp)
+	p.eps = make(map[nano.EndpointId]*pubEp)
 	p.Unlock()
 
 	for id, peer := range peers {

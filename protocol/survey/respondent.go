@@ -10,7 +10,7 @@ import (
 
 type resp struct {
 	sock      nano.ProtocolSocket
-	peers     map[uint32]*respPeer
+	peers     map[nano.EndpointId]*respPeer
 	raw       bool
 	ttl       int
 	backbuf   []byte
@@ -29,14 +29,14 @@ type respPeer struct {
 func (x *resp) Init(sock nano.ProtocolSocket) {
 	x.sock = sock
 	x.ttl = 8
-	x.peers = make(map[uint32]*respPeer)
+	x.peers = make(map[nano.EndpointId]*respPeer)
 	x.w.Init()
 	x.backbuf = make([]byte, 0, 64)
 	x.sock.SetSendError(nano.ErrProtoState)
 }
 
 func (x *resp) Shutdown(expire time.Time) {
-	peers := make(map[uint32]*respPeer)
+	peers := make(map[nano.EndpointId]*respPeer)
 	x.w.WaitAbsTimeout(expire)
 	x.Lock()
 	for id, peer := range x.peers {
@@ -73,7 +73,7 @@ func (x *resp) sender() {
 			continue
 		}
 
-		id := binary.BigEndian.Uint32(m.Header)
+		id := nano.EndpointId(binary.BigEndian.Uint32(m.Header))
 		m.Header = m.Header[4:]
 
 		x.Lock()

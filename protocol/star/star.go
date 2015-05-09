@@ -23,7 +23,7 @@ type starEp struct {
 
 type star struct {
 	sock nano.ProtocolSocket
-	eps  map[uint32]*starEp
+	eps  map[nano.EndpointId]*starEp
 	raw  bool
 	w    nano.Waiter
 	init sync.Once
@@ -33,7 +33,7 @@ type star struct {
 
 func (x *star) Init(sock nano.ProtocolSocket) {
 	x.sock = sock
-	x.eps = make(map[uint32]*starEp)
+	x.eps = make(map[nano.EndpointId]*starEp)
 	x.w.Init()
 }
 
@@ -43,7 +43,7 @@ func (x *star) Shutdown(expire time.Time) {
 
 	x.Lock()
 	peers := x.eps
-	x.eps = make(map[uint32]*starEp)
+	x.eps = make(map[nano.EndpointId]*starEp)
 	x.Unlock()
 
 	for id, peer := range peers {

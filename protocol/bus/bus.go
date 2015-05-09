@@ -24,7 +24,6 @@ func (pe *busEp) peerSender() {
 		}
 
 		if pe.ep.SendMsg(m) != nil {
-			m.Free()
 			return
 		}
 	}
@@ -58,7 +57,7 @@ func (pe *busEp) receiver() {
 
 type bus struct {
 	sock  nano.ProtocolSocket
-	peers map[uint32]*busEp
+	peers map[nano.EndpointId]*busEp
 	raw   bool
 	w     nano.Waiter
 
@@ -68,7 +67,7 @@ type bus struct {
 // Init implements the Protocol Init method.
 func (x *bus) Init(sock nano.ProtocolSocket) {
 	x.sock = sock
-	x.peers = make(map[uint32]*busEp)
+	x.peers = make(map[nano.EndpointId]*busEp)
 
 	x.w.Init()
 	x.w.Add()
@@ -110,7 +109,7 @@ func (x *bus) sender() {
 	sendChan := x.sock.SendChannel()
 	closeChan := x.sock.CloseChannel()
 	for {
-		var id uint32
+		var id nano.EndpointId
 		select {
 		case <-closeChan:
 			return
@@ -119,7 +118,7 @@ func (x *bus) sender() {
 			// If a header was present, it means this message is
 			// being rebroadcast.  It should be a pipe ID.
 			if len(m.Header) >= 4 {
-				id = binary.BigEndian.Uint32(m.Header)
+				id = nano.EndpointId(binary.BigEndian.Uint32(m.Header))
 				m.Header = m.Header[4:]
 			}
 			x.broadcast(m, id)
@@ -128,7 +127,7 @@ func (x *bus) sender() {
 	}
 }
 
-func (x *bus) broadcast(m *nano.Message, sender uint32) {
+func (x *bus) broadcast(m *nano.Message, sender nano.EndpointId) {
 	x.Lock()
 	for id, pe := range x.peers {
 		if sender == id {
@@ -157,7 +156,7 @@ func (x *bus) Shutdown(expire time.Time) {
 
 	x.Lock()
 	peers := x.peers
-	x.peers = make(map[uint32]*busEp)
+	x.peers = make(map[nano.EndpointId]*busEp)
 	x.Unlock()
 
 	for id, peer := range peers {

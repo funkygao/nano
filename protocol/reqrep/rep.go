@@ -31,7 +31,7 @@ func (pe *repEp) sender() {
 
 type rep struct {
 	sock nano.ProtocolSocket
-	eps  map[uint32]*repEp
+	eps  map[nano.EndpointId]*repEp
 
 	backtracebuf []byte
 	backtrace    []byte
@@ -47,7 +47,7 @@ type rep struct {
 
 func (r *rep) Init(sock nano.ProtocolSocket) {
 	r.sock = sock
-	r.eps = make(map[uint32]*repEp)
+	r.eps = make(map[nano.EndpointId]*repEp)
 	r.backtracebuf = make([]byte, 64)
 	r.ttl = 8 // default specified in the RFC
 	r.sock.SetSendError(nano.ErrProtoState)
@@ -159,7 +159,7 @@ func (r *rep) sender() {
 			m.Free()
 			continue
 		}
-		id := binary.BigEndian.Uint32(m.Header)
+		id := nano.EndpointId(binary.BigEndian.Uint32(m.Header))
 		m.Header = m.Header[4:]
 		r.Lock()
 		pe := r.eps[id]
@@ -197,7 +197,7 @@ func (r *rep) Shutdown(expire time.Time) {
 
 	r.Lock()
 	peers := r.eps
-	r.eps = make(map[uint32]*repEp)
+	r.eps = make(map[nano.EndpointId]*repEp)
 	r.Unlock()
 
 	for id, peer := range peers {

@@ -12,7 +12,7 @@ const defaultSurveyTime = time.Second
 
 type surveyor struct {
 	sock     nano.ProtocolSocket
-	peers    map[uint32]*surveyorP
+	peers    map[nano.EndpointId]*surveyorP
 	raw      bool
 	nextID   uint32
 	surveyID uint32
@@ -33,7 +33,7 @@ type surveyorP struct {
 
 func (x *surveyor) Init(sock nano.ProtocolSocket) {
 	x.sock = sock
-	x.peers = make(map[uint32]*surveyorP)
+	x.peers = make(map[nano.EndpointId]*surveyorP)
 	x.sock.SetRecvError(nano.ErrProtoState)
 	x.timer = time.AfterFunc(x.duration,
 		func() { x.sock.SetRecvError(nano.ErrProtoState) })
@@ -42,11 +42,11 @@ func (x *surveyor) Init(sock nano.ProtocolSocket) {
 }
 
 func (x *surveyor) Shutdown(expire time.Time) {
-
 	x.w.WaitAbsTimeout(expire)
+
 	x.Lock()
 	peers := x.peers
-	x.peers = make(map[uint32]*surveyorP)
+	x.peers = make(map[nano.EndpointId]*surveyorP)
 	x.Unlock()
 
 	for id, peer := range peers {

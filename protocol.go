@@ -11,7 +11,7 @@ type Endpoint interface {
 
 	// Id returns a unique 31-bit value associated with the Endpoint.
 	// The value is unique for a given socket, at a given time.
-	Id() uint32
+	Id() EndpointId
 
 	// Close does what you think.
 	Close() error
