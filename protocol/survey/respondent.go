@@ -214,14 +214,6 @@ func (*resp) PeerNumber() uint16 {
 	return nano.ProtoSurveyor
 }
 
-func (*resp) Name() string {
-	return "respondent"
-}
-
-func (*resp) PeerName() string {
-	return "surveyor"
-}
-
 func (x *resp) SetOption(name string, v interface{}) error {
 	var ok bool
 	switch name {

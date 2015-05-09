@@ -192,14 +192,6 @@ func (*rep) PeerNumber() uint16 {
 	return nano.ProtoReq
 }
 
-func (*rep) Name() string {
-	return "rep"
-}
-
-func (*rep) PeerName() string {
-	return "req"
-}
-
 func (r *rep) Shutdown(expire time.Time) {
 	r.waiter.WaitAbsTimeout(expire)
 

@@ -77,14 +77,6 @@ func (*sub) PeerNumber() uint16 {
 	return nano.ProtoPub
 }
 
-func (*sub) Name() string {
-	return "sub"
-}
-
-func (*sub) PeerName() string {
-	return "pub"
-}
-
 func (s *sub) SetOption(name string, value interface{}) error {
 	s.Lock()
 	defer s.Unlock()

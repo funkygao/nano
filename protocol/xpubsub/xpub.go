@@ -34,14 +34,6 @@ func (this *xpub) GetOption(name string) (interface{}, error) {
 	return nil, nil
 }
 
-func (*xpub) Name() string {
-	return "xpub"
-}
-
-func (*xpub) PeerName() string {
-	return "xsub"
-}
-
 func (*xpub) Number() uint16 {
 	return nano.ProtoXPub
 }

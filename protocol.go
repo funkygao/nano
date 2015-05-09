@@ -55,14 +55,8 @@ type Protocol interface {
 	// as assigned by the SP governing body. (IANA?)
 	Number() uint16
 
-	// Name returns our name.
-	Name() string
-
 	// PeerNumber() returns a 16-bit number for our peer protocol.
 	PeerNumber() uint16
-
-	// PeerName() returns the name of our peer protocol.
-	PeerName() string
 
 	// GetOption is used to retrieve the current value of an option.
 	// If the protocol doesn't recognize the option, EBadOption should

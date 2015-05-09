@@ -168,14 +168,6 @@ func (*star) PeerNumber() uint16 {
 	return nano.ProtoStar
 }
 
-func (*star) Name() string {
-	return "star"
-}
-
-func (*star) PeerName() string {
-	return "star"
-}
-
 func (x *star) SetOption(name string, v interface{}) error {
 	var ok bool
 	switch name {

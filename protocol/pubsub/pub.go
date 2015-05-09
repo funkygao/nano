@@ -133,14 +133,6 @@ func (*pub) PeerNumber() uint16 {
 	return nano.ProtoSub
 }
 
-func (*pub) Name() string {
-	return "pub"
-}
-
-func (*pub) PeerName() string {
-	return "sub"
-}
-
 func (p *pub) SetOption(name string, v interface{}) error {
 	var ok bool
 	switch name {

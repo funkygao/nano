@@ -52,14 +52,6 @@ func (*pull) PeerNumber() uint16 {
 	return nano.ProtoPush
 }
 
-func (*pull) Name() string {
-	return "pull"
-}
-
-func (*pull) PeerName() string {
-	return "push"
-}
-
 func (*pull) SendHook(msg *nano.Message) bool {
 	return false
 }

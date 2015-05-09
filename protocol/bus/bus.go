@@ -171,16 +171,8 @@ func (*bus) Number() uint16 {
 	return nano.ProtoBus
 }
 
-func (*bus) Name() string {
-	return "bus"
-}
-
 func (*bus) PeerNumber() uint16 {
 	return nano.ProtoBus
-}
-
-func (*bus) PeerName() string {
-	return "bus"
 }
 
 func (x *bus) RecvHook(m *nano.Message) bool {

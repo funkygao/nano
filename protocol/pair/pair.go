@@ -97,16 +97,8 @@ func (*pair) Number() uint16 {
 	return nano.ProtoPair
 }
 
-func (*pair) Name() string {
-	return "pair"
-}
-
 func (*pair) PeerNumber() uint16 {
 	return nano.ProtoPair
-}
-
-func (*pair) PeerName() string {
-	return "pair"
 }
 
 func (this *pair) SetOption(name string, val interface{}) error {

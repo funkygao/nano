@@ -34,14 +34,6 @@ func (this *xsub) GetOption(name string) (interface{}, error) {
 	return nil, nil
 }
 
-func (*xsub) Name() string {
-	return "xsub"
-}
-
-func (*xsub) PeerName() string {
-	return "xpub"
-}
-
 func (*xsub) Number() uint16 {
 	return nano.ProtoXSub
 }

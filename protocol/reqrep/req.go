@@ -164,14 +164,6 @@ func (*req) PeerNumber() uint16 {
 	return nano.ProtoRep
 }
 
-func (*req) Name() string {
-	return "req"
-}
-
-func (*req) PeerName() string {
-	return "rep"
-}
-
 func (r *req) SendHook(m *nano.Message) bool {
 	if r.raw {
 		// Raw mode has no automatic retry, and must include the

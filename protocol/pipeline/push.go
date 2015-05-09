@@ -56,14 +56,6 @@ func (*push) PeerNumber() uint16 {
 	return nano.ProtoPull
 }
 
-func (*push) Name() string {
-	return "push"
-}
-
-func (*push) PeerName() string {
-	return "pull"
-}
-
 func (this *push) Shutdown(expire time.Time) {
 	this.w.WaitAbsTimeout(expire)
 }

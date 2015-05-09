@@ -154,16 +154,7 @@ func (*surveyor) PeerNumber() uint16 {
 	return nano.ProtoRespondent
 }
 
-func (*surveyor) Name() string {
-	return "surveyor"
-}
-
-func (*surveyor) PeerName() string {
-	return "respondent"
-}
-
 func (x *surveyor) SendHook(m *nano.Message) bool {
-
 	if x.raw {
 		return true
 	}
