@@ -27,11 +27,8 @@ func (this *dialer) Dial() (nano.Pipe, error) {
 
 	nano.Debugf("dial tcp:%v done, NewConnPipe...", *this.addr)
 
-	props := make([]interface{}, 0)
-	for n, v := range this.t.opts {
-		props = append(props, n, v)
-	}
-	return nano.NewConnPipe(conn, this.proto, props...)
+	return nano.NewConnPipe(conn, this.proto,
+		nano.FlattenOptions(this.t.opts)...)
 }
 
 func (this *dialer) SetOption(name string, val interface{}) error {

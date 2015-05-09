@@ -41,11 +41,8 @@ func (d *dialer) Dial() (nano.Pipe, error) {
 		return nil, err
 	}
 
-	props := make([]interface{}, 0)
-	for n, v := range d.t.opts {
-		props = append(props, n, v)
-	}
-	return nano.NewConnPipeIPC(conn, d.proto, props...)
+	return nano.NewConnPipeIPC(conn, d.proto,
+		nano.FlattenOptions(d.t.opts)...)
 }
 
 // SetOption implements a stub PipeDialer SetOption method.
@@ -83,11 +80,8 @@ func (l *listener) Accept() (nano.Pipe, error) {
 		return nil, err
 	}
 
-	props := make([]interface{}, 0)
-	for n, v := range l.t.opts {
-		props = append(props, n, v)
-	}
-	return nano.NewConnPipeIPC(conn, l.proto, props...)
+	return nano.NewConnPipeIPC(conn, l.proto,
+		nano.FlattenOptions(l.t.opts)...)
 }
 
 // Close implements the PipeListener Close method.

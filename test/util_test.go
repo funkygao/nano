@@ -19,6 +19,24 @@ func TestStripScheme(t *testing.T) {
 	assert.Equal(t, nil, err)
 }
 
+func TestFlattenOptions(t *testing.T) {
+	opts := map[string]interface{}{
+		"nodelay":   true,
+		"keepalive": false,
+	}
+	r := nano.FlattenOptions(opts)
+	t.Logf("%+v", r)
+	assert.Equal(t, 4, len(r))
+	for idx, v := range r {
+		if v == "nodelay" {
+			assert.Equal(t, true, r[idx+1].(bool))
+		}
+		if v == "keepalive" {
+			assert.Equal(t, false, r[idx+1].(bool))
+		}
+	}
+}
+
 func BenchmarkStripScheme(b *testing.B) {
 	trans := tcp.NewTransport()
 	var addr = "tcp://192.168.0.111:5555"

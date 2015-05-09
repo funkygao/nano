@@ -26,6 +26,15 @@ func StripScheme(t Transport, addr string) (string, error) {
 	return addr[len(s):], nil
 }
 
+// FlattenOptions flattens options from map to slice.
+func FlattenOptions(opts map[string]interface{}) []interface{} {
+	r := make([]interface{}, 0, len(opts)*2)
+	for k, v := range opts {
+		r = append(r, k, v)
+	}
+	return r
+}
+
 // DrainChannel will wait till the channel become empty. If after
 // expire still not empty, return false.
 func DrainChannel(ch chan<- *Message, expire time.Time) bool {

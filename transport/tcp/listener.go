@@ -32,11 +32,8 @@ func (this *listener) Accept() (nano.Pipe, error) {
 		return nil, err
 	}
 
-	props := make([]interface{}, 0)
-	for n, v := range this.t.opts {
-		props = append(props, n, v)
-	}
-	return nano.NewConnPipe(conn, this.proto, props...)
+	return nano.NewConnPipe(conn, this.proto,
+		nano.FlattenOptions(this.t.opts)...)
 }
 
 func (this *listener) Listen() (err error) {

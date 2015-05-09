@@ -357,6 +357,7 @@ func (sock *socket) XRecv(buf *bytes.Buffer) (n int, err error) {
 
 func (sock *socket) SetOption(name string, value interface{}) error {
 	matched := false
+	// set protocol option
 	err := sock.proto.SetOption(name, value)
 	if err == nil {
 		matched = true
@@ -364,6 +365,7 @@ func (sock *socket) SetOption(name string, value interface{}) error {
 		return err
 	}
 
+	// set socket option
 	sock.Lock()
 	defer sock.Unlock()
 	switch name {
