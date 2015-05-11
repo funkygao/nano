@@ -3,6 +3,7 @@
 
 examples/pair/pair
 examples/benchmark/benchmark
+examples/pipeline/pipeline
 examples/pubsub/pubsub
 examples/tlstcp/tlstcp
 examples/reqrep/reqrep
