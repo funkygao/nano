@@ -1,6 +1,7 @@
 package nano
 
 import (
+	"net"
 	"time"
 )
 
@@ -26,6 +27,14 @@ type Endpoint interface {
 	// RecvMsg receives a message.  It blocks until the message is
 	// received.  On error, the pipe is closed and nil is returned.
 	RecvMsg() *Message
+
+	// RemoteAddr returns remote address of this endpoint.
+	// nil if remote address not available.
+	RemoteAddr() net.Addr
+
+	// LocalAddr returns local address of this endpoint.
+	// nil if local address not available.
+	LocalAddr() net.Addr
 }
 
 // Protocol implementations handle the "meat" of protocol processing.  Each

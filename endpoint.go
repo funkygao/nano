@@ -2,6 +2,7 @@ package nano
 
 import (
 	"math/rand"
+	"net"
 	"sync"
 	"time"
 )
@@ -72,6 +73,20 @@ func newPipeEndpoint(connPipe Pipe, d *dialer, l *listener) *pipeEndpoint {
 
 func (this *pipeEndpoint) Id() EndpointId {
 	return this.id
+}
+
+func (this *pipeEndpoint) LocalAddr() net.Addr {
+	if addr, err := this.pipe.GetProp(PropLocalAddr); err == nil {
+		return addr.(net.Addr)
+	}
+	return nil
+}
+
+func (this *pipeEndpoint) RemoteAddr() net.Addr {
+	if addr, err := this.pipe.GetProp(PropRemoteAddr); err == nil {
+		return addr.(net.Addr)
+	}
+	return nil
 }
 
 func (this *pipeEndpoint) Close() error {

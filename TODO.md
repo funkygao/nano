@@ -4,6 +4,7 @@ TODO
 - [X] sync.Pool and bytes.Buffer
 - [X] optional handshake
 - [ ] benchmark shows mem leakage
+- [ ] prefork in protocol implementation
 - [X] batch the framed msg to increase throughput
   protocol will have to manually call ep.Flush
 - [ ] device use sendfile for zero copy
