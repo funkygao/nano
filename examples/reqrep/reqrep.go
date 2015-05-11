@@ -30,6 +30,8 @@ func request(addr string) {
 	dieIfErr(sock.Dial(addr))
 	dieIfErr(sock.SetOption(nano.OptionSendDeadline, time.Second))
 
+	log.Printf("connected to %s", addr)
+
 	// Message routing
 	for i := 0; i < 2; i++ {
 		err := sock.Send([]byte(strings.Repeat("X", 100)))
