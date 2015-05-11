@@ -23,6 +23,8 @@ Enjoy!
 
 #### Pluggable Transport
 
+Nano is transport agnostic.
+
 Currently supported transports:
 
 - tcp
@@ -39,6 +41,9 @@ Currently supported transports:
 
 #### Pluggable Protocol
 
+Nano is protocol agnostic.
+Protocol implements the topology: a set of applications participating on the same aspect of the business logic.
+
 Currently supported protocols:
 
 - bus
@@ -50,43 +55,28 @@ Currently supported protocols:
 
 ### Internals
 
-#### Send
-
-        Application, create msg
-            | 
-            V 
-        Socket.SendMsg
-            | 
-        ProtocolSendHook.SendHook
-            | 
-            | ProtocolSocket.SendChannel
-            V 
-        Protocol
-            |
-            | sender thread loop
-            V
-        EndPoint.SendMsg
-            |
-        Pipe.SendMsg, then msg.Free
+        Application, create msg                     Application, then msg.Free
+            |                                           ^
+            V                                           |
+        Socket.SendMsg ---------------------------- Socket.RecvMsg
+            |                                           |
+        ProtocolSendHook.SendHook                   ProtocolRecvHook.RecvHook
+            |                                           ^
+            | ProtocolSocket.SendChannel                | ProtocolSocket.RecvChannel
+            V                                           |
+        Protocol                                    Protocol
+            |                                           ^
+            | sender thread loop                        | receiver thread loop
+            V                                           |
+        EndPoint.SendMsg                            EndPoint.RecvMsg
+            |                                           |
+        Pipe.SendMsg, then msg.Free                 Pipe.RecvMsg, create msg
+            |                                           |
+            |                                           |
+            +-------------------------------------------+                              
+                              transport 
            
 
-#### Recv
-
-        Application, then msg.Free
-            ^ 
-            | 
-        Socket.RecvMsg
-            ^ 
-            | ProtocolSocket.RecvChannel
-            | 
-        Protocol
-            ^
-            | receiver thread loop
-            |
-        EndPoint.RecvMsg
-            |
-        Pipe.RecvMsg, create msg
-           
 #### Reducing GC Presure
 
 #### Timers
