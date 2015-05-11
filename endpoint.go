@@ -107,6 +107,7 @@ func (this *pipeEndpoint) Close() error {
 	if sock != nil {
 		sock.removePipe(this)
 	}
+	this.pipe.Flush() // flush before close
 	this.pipe.Close()
 
 	endpointPool.Lock()
