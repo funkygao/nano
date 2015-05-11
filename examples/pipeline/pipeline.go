@@ -1,11 +1,4 @@
 // a one-way pipe with Device(intermediary node) feature.
-//
-// Usage:
-// 3 nodes required:
-// node1: $ pipeline pull tcp://127.0.0.1:1235
-// node2: $ pipeline push tcp://127.0.0.1:1234
-// node3: $ pipeline forward tcp://127.0.0.1:1234 tcp://127.0.0.1:1235
-//
 package main
 
 import (
@@ -15,7 +8,6 @@ import (
 	"log"
 	"os"
 	"strings"
-	"time"
 )
 
 func init() {
@@ -32,10 +24,12 @@ func doForward(fromAddr, toAddr string) {
 	pullSock := pipeline.NewPullSocket()
 	transport.AddAll(pullSock)
 	dieIfErr(pullSock.Listen(fromAddr))
+	log.Printf("forward listen on: %s", fromAddr)
 
 	pushSock := pipeline.NewPushSocket()
 	transport.AddAll(pushSock)
 	dieIfErr(pushSock.Dial(toAddr))
+	log.Printf("forward dial to: %s", toAddr)
 
 	dieIfErr(nano.Device(pullSock, pushSock))
 	select {}
@@ -49,6 +43,7 @@ func doPull(addr string) {
 	sock := pipeline.NewPullSocket()
 	transport.AddAll(sock)
 	dieIfErr(sock.Listen(addr))
+	log.Printf("pull listen on: %s", addr)
 
 	// Message routing
 	for {
@@ -59,7 +54,6 @@ func doPull(addr string) {
 	}
 
 	dieIfErr(sock.Close())
-
 }
 
 func doPush(addr string) {
@@ -67,11 +61,12 @@ func doPush(addr string) {
 	sock := pipeline.NewPushSocket()
 	transport.AddAll(sock)
 	dieIfErr(sock.Dial(addr))
+	log.Printf("push dial to: %s", addr)
 
 	// Message routing
+	msg := strings.Repeat("X", 10)
 	for {
-		dieIfErr(sock.Send([]byte(strings.Repeat("X", 10))))
-		time.Sleep(time.Second)
+		dieIfErr(sock.Send([]byte(msg)))
 	}
 
 	dieIfErr(sock.Close())
