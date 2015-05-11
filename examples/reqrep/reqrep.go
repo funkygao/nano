@@ -21,6 +21,7 @@ func dieIfErr(err error) {
 }
 
 func request(addr string) {
+	// Topology establishment
 	sock := reqrep.NewReqSocket()
 	transport.AddAllOptions(sock, nano.OptionSnappy, true,
 		nano.OptionNoHandshake, true)
@@ -29,6 +30,7 @@ func request(addr string) {
 	dieIfErr(sock.Dial(addr))
 	dieIfErr(sock.SetOption(nano.OptionSendDeadline, time.Second))
 
+	// Message routing
 	for i := 0; i < 2; i++ {
 		err := sock.Send([]byte(strings.Repeat("X", 100)))
 		dieIfErr(err)
@@ -44,12 +46,14 @@ func request(addr string) {
 }
 
 func reply(addr string) {
+	// Topology establishment
 	sock := reqrep.NewRepSocket()
 	transport.AddAllOptions(sock, nano.OptionSnappy, true,
 		nano.OptionNoHandshake, true)
 	dieIfErr(sock.Listen(addr))
 	log.Printf("listening on %s", addr)
 
+	// Message routing
 	for {
 		data, err := sock.Recv()
 		dieIfErr(err)

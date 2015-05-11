@@ -45,10 +45,12 @@ func doForward(fromAddr, toAddr string) {
 }
 
 func doPull(addr string) {
+	// Topology establishment
 	sock := pipeline.NewPullSocket()
 	transport.AddAll(sock)
 	dieIfErr(sock.Listen(addr))
 
+	// Message routing
 	for {
 		data, err := sock.Recv()
 		dieIfErr(err)
@@ -61,10 +63,12 @@ func doPull(addr string) {
 }
 
 func doPush(addr string) {
+	// Topology establishment
 	sock := pipeline.NewPushSocket()
 	transport.AddAll(sock)
 	dieIfErr(sock.Dial(addr))
 
+	// Message routing
 	for {
 		dieIfErr(sock.Send([]byte(strings.Repeat("X", 10))))
 		time.Sleep(time.Second)

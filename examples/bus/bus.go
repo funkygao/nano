@@ -26,14 +26,15 @@ func usage() {
 }
 
 func run(args []string) {
+	// Topology establishment
 	sock := bus.NewSocket()
 	transport.AddAll(sock)
+	dieIfErr(sock.Listen(args[2]))
 
 	fmt.Printf("%s -> %v\n", args[1], args[3:])
-
-	dieIfErr(sock.Listen(args[2]))
 	time.Sleep(time.Second)
 
+	// Message routing
 	for i := 3; i < len(args); i++ {
 		dieIfErr(sock.Dial(args[i]))
 	}

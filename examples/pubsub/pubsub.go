@@ -31,12 +31,14 @@ func dieIfErr(err error) {
 }
 
 func doPub() {
+	// Topology establishment
 	sock := pubsub.NewPubSocket()
 	transport.AddAll(sock)
 	dieIfErr(sock.Listen(addr))
 
 	body := []byte(strings.Repeat("X", 100))
 	var i int64
+	// Message routing
 	for {
 		i++
 		fmt.Println("sending: ", i, string(body))
@@ -47,6 +49,7 @@ func doPub() {
 }
 
 func doSub() {
+	// Topology establishment
 	sock := pubsub.NewSubSocket()
 	transport.AddAll(sock)
 	dieIfErr(sock.Dial(addr))
@@ -55,6 +58,7 @@ func doSub() {
 
 	fmt.Println("ready")
 	var i int64
+	// Message routing
 	for {
 		data, err := sock.Recv()
 		dieIfErr(err)
