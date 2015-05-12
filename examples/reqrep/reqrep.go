@@ -20,7 +20,7 @@ func dieIfErr(err error) {
 	}
 }
 
-func request(addr string) {
+func request(addr string, m string) {
 	// Topology establishment
 	sock := reqrep.NewReqSocket()
 	transport.AddAllOptions(sock, nano.OptionSnappy, true,
@@ -33,13 +33,13 @@ func request(addr string) {
 	log.Printf("connected to %s", addr)
 
 	// Message routing
-	for i := 0; i < 2; i++ {
-		err := sock.Send([]byte(strings.Repeat("X", 100)))
+	for i := 0; i < 1; i++ {
+		err := sock.Send([]byte(strings.Repeat(m, 10)))
 		dieIfErr(err)
 
 		msg, err := sock.Recv()
 		dieIfErr(err)
-		log.Println(i, string(msg))
+		log.Println(m, i, string(msg))
 
 		time.Sleep(time.Second)
 	}
@@ -60,15 +60,19 @@ func reply(addr string) {
 		data, err := sock.Recv()
 		dieIfErr(err)
 
-		log.Println(string(data))
+		msg := string(data)
+		if strings.HasPrefix(msg, "X") {
+			dieIfErr(sock.Send([]byte("req1 hello")))
+		} else if strings.HasPrefix(msg, "Y") {
+			dieIfErr(sock.Send([]byte("req2 hello")))
+		}
 
-		dieIfErr(sock.Send([]byte("world")))
 	}
 
 }
 
 func usage() {
-	log.Printf("Usage: %s <rep|req> <url>", os.Args[0])
+	log.Printf("Usage: %s <rep|req1|req2> <url>", os.Args[0])
 	log.Println("url example: tcp://127.0.0.1:1234  ipc://x.sock  inproc://test  tls+tcp://127.0.0.1:1234")
 	os.Exit(0)
 }
@@ -81,8 +85,10 @@ func main() {
 	switch os.Args[1] {
 	case "rep":
 		reply(os.Args[2])
-	case "req":
-		request(os.Args[2])
+	case "req1":
+		request(os.Args[2], "X")
+	case "req2":
+		request(os.Args[2], "Y")
 	default:
 		usage()
 	}
