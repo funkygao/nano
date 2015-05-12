@@ -12,7 +12,7 @@ import (
 type pair struct {
 	sock   nano.ProtocolSocket
 	peer   nano.Endpoint
-	raw    bool
+	raw    bool // FIXME not in use
 	waiter nano.Waiter
 	sync.Mutex
 }
@@ -25,7 +25,7 @@ func (this *pair) Init(sock nano.ProtocolSocket) {
 func (this *pair) AddEndpoint(endpoint nano.Endpoint) {
 	this.Lock()
 	if this.peer != nil {
-		// TODO not good design
+		// only permits 1:1 communication, not 1:N
 		this.Unlock()
 		endpoint.Close()
 		return
