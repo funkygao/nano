@@ -185,8 +185,7 @@ func (this *connPipe) SendMsg(msg *Message) error {
 		msg.Free()
 		return err
 	}
-
-	// send frame body
+	// send frame payload: message header + message body
 	if _, err := this.writer.Write(msg.Header); err != nil {
 		this.wlock.Unlock()
 		msg.Free()
@@ -302,22 +301,19 @@ func (this *connPipeIpc) SendMsg(msg *Message) error {
 		msg.Free()
 		return err
 	}
+	// send frame size
 	if err = binary.Write(this.writer, binary.BigEndian, sz); err != nil {
 		this.wlock.Unlock()
 		msg.Free()
 		return err
 	}
+	// send frame payload: message header + message body
 	if _, err = this.writer.Write(msg.Header); err != nil {
 		this.wlock.Unlock()
 		msg.Free()
 		return err
 	}
 	if _, err = this.writer.Write(msg.Body); err != nil {
-		this.wlock.Unlock()
-		msg.Free()
-		return err
-	}
-	if err := this.writer.Flush(); err != nil {
 		this.wlock.Unlock()
 		msg.Free()
 		return err
