@@ -30,7 +30,7 @@ func (*push) RemoveEndpoint(ep nano.Endpoint) {}
 
 func (this *push) sender(ep nano.Endpoint) {
 	defer this.w.Done()
-	sendChan := this.sock.SendChannel()
+	sendChan := this.sock.SendChannel() // all pullers share the same chan
 	closeChan := this.sock.CloseChannel()
 	for {
 		select {
@@ -39,7 +39,6 @@ func (this *push) sender(ep nano.Endpoint) {
 
 		case msg := <-sendChan:
 			if err := ep.SendMsg(msg); err != nil {
-				// ep will close itself
 				nano.Debugf("%v", err)
 				return
 			}

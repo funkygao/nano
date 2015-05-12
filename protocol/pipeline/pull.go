@@ -35,6 +35,7 @@ func (this *pull) receiver(ep nano.Endpoint) {
 
 		select {
 		case recvChan <- msg:
+			// will block if app consumes slow
 
 		case <-closeChan:
 			return
