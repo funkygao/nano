@@ -6,6 +6,7 @@ import (
 	nano "github.com/funkygao/nano"
 )
 
+// push will dial puller's.
 type push struct {
 	sock nano.ProtocolSocket
 	raw  bool
@@ -30,7 +31,8 @@ func (*push) RemoveEndpoint(ep nano.Endpoint) {}
 
 func (this *push) sender(ep nano.Endpoint) {
 	defer this.w.Done()
-	sendChan := this.sock.SendChannel() // all pullers share the same chan
+	// all pullers share the same send chan
+	sendChan := this.sock.SendChannel()
 	closeChan := this.sock.CloseChannel()
 	for {
 		select {

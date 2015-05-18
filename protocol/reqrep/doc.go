@@ -3,4 +3,19 @@
 // a row) will result in error.
 // REQ is the request side of the request/response pattern.
 // REP is the response side of the request/response pattern.
+//
+/*
+	+--------+	+--------+	+--------+
+	| client |	| client |	| client |
+	|--------|	|--------|	|--------|
+	| REQ    | 	| REQ    |	| REQ    |
+	+--------+	+--------+	+--------+
+
+			+--------+
+			| REP    |
+			|--------|
+			| server |
+			+--------+
+
+*/
 package reqrep

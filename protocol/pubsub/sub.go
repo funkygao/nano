@@ -8,6 +8,7 @@ import (
 	"github.com/funkygao/nano"
 )
 
+// sub will dial pub.
 type sub struct {
 	sock nano.ProtocolSocket
 	subs [][]byte

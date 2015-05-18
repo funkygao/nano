@@ -9,6 +9,8 @@ import (
 )
 
 // req is an implementation of the req protocol.
+// If a req dials multiple rep nodes, requests will be
+// load balanced across the rep nodes.
 type req struct {
 	sock          nano.ProtocolSocket
 	resendMsgChan chan *nano.Message

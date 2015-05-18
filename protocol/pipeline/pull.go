@@ -6,6 +6,7 @@ import (
 	"github.com/funkygao/nano"
 )
 
+// pull will listen and accept pusher's.
 type pull struct {
 	sock nano.ProtocolSocket
 	raw  bool
