@@ -8,6 +8,8 @@ import (
 // system.  It is an abstraction of an application's "connection" to a
 // messaging topology.  Applications can have more than one Socket open
 // at a time.
+// A single Socket might have connections to multiple endpoints, which is
+// the basic difference from POSIX socket.
 type Socket interface {
 
 	// Close closes the open Socket.  Further operations on the socket
@@ -18,12 +20,16 @@ type Socket interface {
 	// unless the buffer(s) are full.  Once the system takes ownership of
 	// the message, it guarantees to deliver the message or keep trying as
 	// long as the Socket is open.
+	// Depending on the protocol, a single Send might send message to
+	// multiple endpoints.
 	Send([]byte) error
 
 	// XSend is same as Recv except that it accept buffer as arg.
 	XSend(*bytes.Buffer) error
 
 	// Recv receives a complete message.  The entire message is received.
+	// Depending on the protocol, a single Recv might receive message from
+	// multiple endpoints.
 	Recv() ([]byte, error)
 
 	// XRecv is same as Recv except that it can make use of buffer to

@@ -5,6 +5,9 @@ TODO
 - [X] optional handshake
 - [ ] benchmark shows mem leakage
 - [ ] prefork in protocol implementation
+- [ ] logger of Socket/ProtocolSocket
+- [ ] multiple frames in one message
+- [ ] socket identity for persistent socket
 - [X] batch the framed msg to increase throughput
   protocol will have to manually call ep.Flush
 - [ ] device use sendfile for zero copy

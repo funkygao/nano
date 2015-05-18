@@ -178,9 +178,7 @@ const (
 
 	ProtoBus = uint16(7*16) + 0
 
-	protoXPubSub = 8
-	ProtoXPub    = uint16(protoXPubSub*16) + 0
-	ProtoXSub    = uint16(protoXPubSub*16) + 1
+	ProtoMq = uint16(8*16) + 0
 
 	// Experimental Protocols - Use at Risk
 	ProtoStar = uint16(100*16) + 0

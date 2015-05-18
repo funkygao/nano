@@ -44,3 +44,24 @@ func TestMessageRecyle(t *testing.T) {
 	// free on an already free'ed msg
 	assert.Equal(t, true, msg.Free())
 }
+
+func TestMessageReadSlice(t *testing.T) {
+	msg := nano.NewMessage(100)
+	msg.Body = []byte("a b c d\ne f g,\n")
+	l1 := msg.ReadSlice('\n')
+	assert.Equal(t, "a b c d\n", string(l1))
+	l2 := msg.ReadSlice('\n')
+	assert.Equal(t, "e f g,\n", string(l2))
+	l3 := msg.ReadSlice('\n')
+	assert.Equal(t, "", string(l3))
+}
+
+func TestMessageReadFull(t *testing.T) {
+	msg := nano.NewMessage(100)
+	msg.Body = []byte("a b c d\ne f g,\n")
+	msg.ReadSlice('\n')
+	line := msg.ReadFull()
+	assert.Equal(t, "e f g,\n", string(line))
+	line = msg.ReadFull()
+	assert.Equal(t, "", string(line))
+}

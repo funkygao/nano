@@ -1,6 +1,7 @@
 package nano
 
 import (
+	"bytes"
 	"sync/atomic"
 	"time"
 )
@@ -11,6 +12,7 @@ import (
 // transport layers (including TCP/ethernet headers, and SP protocol
 // independent length headers), are *not* included in the Header.
 type Message struct {
+	r      int
 	Header []byte
 	Body   []byte
 
@@ -74,6 +76,21 @@ func (this *Message) Free() (recycled bool) {
 func (this *Message) Dup() *Message {
 	atomic.AddInt32(&this.refCount, 1)
 	return this
+}
+
+func (this *Message) ReadSlice(delim byte) (line []byte) {
+	if i := bytes.IndexByte(this.Body[this.r:], delim); i >= 0 {
+		line = this.Body[this.r : this.r+i+1]
+		this.r += i + 1
+	}
+
+	return
+}
+
+func (this *Message) ReadFull() []byte {
+	b := this.Body[this.r:]
+	this.r = len(this.Body)
+	return b
 }
 
 // NewMessage is the supported way to obtain a new Message.  This makes

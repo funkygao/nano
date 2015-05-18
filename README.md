@@ -16,6 +16,9 @@ nano is easy to use, but behind the scenes, it does a lot:
 - It ensures that individual peers are assigned their fair share of server resources so that a single client can't hijack the server. 
 - It allows you to send data to the topology rather than to particular endpoint.
 - It compress/decompress IO streams on demand.
+- It avoid message overflow: if send/recv queue is full, it will block sender/receiver or drop message, depending
+  on the protocol implementation.
+- It provides multiple patterns of message routing: protocol, with which to build topology.
 
 Enjoy!
 
@@ -62,6 +65,7 @@ Currently supported protocols:
             |                                           |
         ProtocolSendHook.SendHook                   ProtocolRecvHook.RecvHook
             |                                           ^
+            | nano transmit buffer                      | nano transmit buffer
             | ProtocolSocket.SendChannel                | ProtocolSocket.RecvChannel
             V                                           |
         Protocol                                    Protocol
@@ -73,6 +77,7 @@ Currently supported protocols:
         Pipe.SendMsg, then msg.Free                 Pipe.RecvMsg, create msg
             |                                           |
             |                                           |
+            | network I/O buffer                        | network I/O buffer
             +-------------------------------------------+                              
                               transport 
            
