@@ -19,7 +19,7 @@ func init() {
 }
 
 func broker() {
-	sock := mq.NewSocket()
+	sock := mq.NewBrokerSocket()
 	transport.AddAll(sock)
 	dieIfErr(sock.Listen(addr))
 
@@ -31,20 +31,36 @@ func broker() {
 }
 
 func sub() {
+	sock := mq.NewSubSocket()
+	transport.AddAll(sock)
+	dieIfErr(sock.Dial(addr))
+
+	for {
+		data, err := sock.Recv()
+		if err != nil {
+			println(err)
+			return
+		}
+
+		fmt.Println(string(data))
+	}
 
 }
 
 func pub() {
-	sock := mq.NewSocket()
+	sock := mq.NewPubSocket()
 	sock.SetOption(nano.OptionWriteQLen, 2)
 	transport.AddAll(sock)
 	dieIfErr(sock.Dial(addr))
 
-	body := []byte("PUB x\nhello")
+	i := 0
 	for {
-		sock.Send(body)
-
+		i++
 		time.Sleep(time.Second * 5)
+
+		body := []byte(fmt.Sprintf("PUB x\nhello %d", i))
+		dieIfErr(sock.Send(body))
+
 	}
 
 }

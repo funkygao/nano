@@ -28,9 +28,9 @@ func (this *broker) AddEndpoint(ep nano.Endpoint) {
 }
 
 func (this *broker) ioLoop(ep nano.Endpoint) {
-	// handshake for mq protocol version magic
 	protocolMagic, err := this.handshake(ep)
 	if err != nil {
+		nano.Debugf(err.Error())
 		return
 	}
 
@@ -49,18 +49,9 @@ func (this *broker) ioLoop(ep nano.Endpoint) {
 }
 
 func (this *broker) handshake(ep nano.Endpoint) (protocolMagic int, err error) {
-	msg := nano.NewMessage(2)
-	msg.Body = msg.Body[:2]
-	msg.Body[0] = 0
-	msg.Body[1] = 1
-	if err = ep.SendMsg(msg); err != nil {
-		return
-	}
-	if err = ep.Flush(); err != nil {
-		return
-	}
-
-	msg = ep.RecvMsg()
+	// TODO timeout
+	nano.Debugf("receiving")
+	msg := ep.RecvMsg()
 	if msg == nil {
 		return -1, nano.ErrClosed
 	}
@@ -95,7 +86,7 @@ func (this *broker) getTopic(topicName string) *Topic {
 		return t
 	}
 
-	t := NewTopic(topicName, this)
+	t := newTopic(topicName, this)
 	this.topicMap[topicName] = t
 	this.Unlock()
 	return t

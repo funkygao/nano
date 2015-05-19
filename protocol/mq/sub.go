@@ -15,7 +15,10 @@ func (this *sub) Init(sock nano.ProtocolSocket) {
 }
 
 func (this *sub) AddEndpoint(ep nano.Endpoint) {
-
+	if err := handshake(ep); err != nil {
+		nano.Debugf(err.Error())
+		return
+	}
 }
 
 func (this *sub) RemoveEndpoint(ep nano.Endpoint) {
@@ -44,4 +47,8 @@ func (*sub) PeerNumber() uint16 {
 
 func NewSubSocket() nano.Socket {
 	return nano.MakeSocket(&sub{})
+}
+
+func Sub(topic string) {
+
 }

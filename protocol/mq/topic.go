@@ -27,7 +27,7 @@ func (this *Topic) messagePump() {
 
 }
 
-func NewTopic(topicName string, broker *broker) *Topic {
+func newTopic(topicName string, broker *broker) *Topic {
 	t := &Topic{
 		name:       topicName,
 		broker:     broker,

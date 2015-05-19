@@ -22,3 +22,9 @@ TODO
   examples/pipeline
 - [ ] msg copy between transports
 - [ ] Asynchronous DNS queries
+
+### MQ
+
+- compact stale log
+- sendfile
+- timeout

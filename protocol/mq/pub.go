@@ -15,7 +15,31 @@ func (this *pub) Init(sock nano.ProtocolSocket) {
 }
 
 func (this *pub) AddEndpoint(ep nano.Endpoint) {
+	if err := handshake(ep); err != nil {
+		nano.Debugf(err.Error())
+		return
+	}
 
+	go this.sender(ep)
+
+}
+
+func (this *pub) sender(ep nano.Endpoint) {
+	sendChan := this.sock.SendChannel()
+	closeChan := this.sock.CloseChannel()
+
+	for {
+		select {
+		case <-closeChan:
+			return
+
+		case msg := <-sendChan:
+			if err := ep.SendMsg(msg); err != nil {
+				return
+			}
+			ep.Flush()
+		}
+	}
 }
 
 func (this *pub) RemoveEndpoint(ep nano.Endpoint) {
@@ -44,4 +68,8 @@ func (*pub) PeerNumber() uint16 {
 
 func NewPubSocket() nano.Socket {
 	return nano.MakeSocket(&pub{})
+}
+
+func Pub(topic string) {
+
 }

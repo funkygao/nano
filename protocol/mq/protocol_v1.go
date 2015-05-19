@@ -12,7 +12,7 @@ type protocolV1 struct {
 }
 
 func (this *protocolV1) IOLoop(ep nano.Endpoint) {
-	nano.Debugf("endpoint: %d", ep.Id())
+	nano.Debugf("endpoint: %d %s", ep.Id(), ep.RemoteAddr())
 
 	this.ep = ep
 

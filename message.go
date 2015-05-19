@@ -129,7 +129,7 @@ func messagePoolWatchdog() {
 		return
 	}
 
-	ticker := time.NewTicker(time.Minute)
+	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
 
 	for _ = range ticker.C {
