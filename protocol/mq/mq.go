@@ -37,7 +37,7 @@ func (this *mq) ioLoop(ep nano.Endpoint) {
 	var prot Protocol
 	switch protocolMagic {
 	case 1:
-		prot = &protocolV1{ctx: &context{this}, ep: ep}
+		prot = &protocolV1{mq: this, ep: ep}
 
 	default:
 		nano.Debugf("invalid protocol")
@@ -85,7 +85,7 @@ func (this *mq) getTopic(topicName string) *Topic {
 		return t
 	}
 
-	t := NewTopic(topicName, &context{mq: this})
+	t := NewTopic(topicName, this)
 	this.topicMap[topicName] = t
 	this.Unlock()
 	return t

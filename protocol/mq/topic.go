@@ -6,7 +6,8 @@ import (
 
 type Topic struct {
 	name       string
-	ctx        *context
+	partitions int
+	mq         *mq
 	channelMap map[string]*Channel
 	backend    BackendQueue
 }
@@ -22,10 +23,10 @@ func (this *Topic) messagePump() {
 
 }
 
-func NewTopic(topicName string, ctx *context) *Topic {
+func NewTopic(topicName string, mq *mq) *Topic {
 	t := &Topic{
 		name:       topicName,
-		ctx:        ctx,
+		mq:         mq,
 		channelMap: make(map[string]*Channel),
 	}
 
