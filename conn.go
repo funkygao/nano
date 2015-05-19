@@ -148,8 +148,6 @@ func (this *connPipe) RecvMsg() (*Message, error) {
 		return nil, err
 	}
 
-	Debugf("sz: %d", sz)
-
 	if sz > defaultMaxMsgSize || sz < 0 {
 		this.conn.Close()
 		this.rlock.Unlock()
@@ -165,7 +163,7 @@ func (this *connPipe) RecvMsg() (*Message, error) {
 		return nil, err
 	}
 
-	Debugf("msgbody: %s %#v", string(msg.Body), msg.Body) // TODO
+	Debugf("size:%d msgbody: %s %#v", sz, string(msg.Body), msg.Body) // TODO
 
 	this.rlock.Unlock()
 	return msg, nil
