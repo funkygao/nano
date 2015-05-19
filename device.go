@@ -51,12 +51,13 @@ func forwarder(fromSock Socket, toSock Socket) {
 	for {
 		msg, err := fromSock.RecvMsg()
 		if err != nil {
-			// Probably closed socket, nothing else we can do.
+			// ErrClosed or ErrSendTimeout
 			return
 		}
 
 		err = toSock.SendMsg(msg)
 		if err != nil {
+			// ErrClosed or ErrSendTimeout
 			return
 		}
 	}
