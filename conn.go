@@ -47,7 +47,7 @@ func NewConnPipe(conn net.Conn, proto Protocol, props ...interface{}) (Pipe, err
 		this.props[props[i].(string)] = props[i+1]
 	}
 
-	Debugf("proto:%s, props:%v", proto.Number(), this.props)
+	Debugf("proto:%d, props:%v", proto.Number(), this.props)
 
 	v, err := this.GetProp(OptionNoHandshake)
 	if err != nil || !v.(bool) {
