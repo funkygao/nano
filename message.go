@@ -120,6 +120,7 @@ func NewMessage(sz int) *Message {
 	msg.refCount = 1
 	msg.Body = msg.bodyBuf
 	msg.Header = msg.headerBuf
+	msg.r = 0
 	return msg
 }
 
