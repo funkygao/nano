@@ -7,27 +7,27 @@ import (
 	"github.com/funkygao/nano"
 )
 
-type mq struct {
+type broker struct {
 	sock     nano.ProtocolSocket
 	topicMap map[string]*Topic
 	sync.RWMutex
 }
 
-func (this *mq) Init(sock nano.ProtocolSocket) {
+func (this *broker) Init(sock nano.ProtocolSocket) {
 	this.sock = sock
 	this.initializeTopics()
 }
 
-func (this *mq) initializeTopics() {
+func (this *broker) initializeTopics() {
 	// TODO read from mysql and build topics
 	this.topicMap = make(map[string]*Topic)
 }
 
-func (this *mq) AddEndpoint(ep nano.Endpoint) {
+func (this *broker) AddEndpoint(ep nano.Endpoint) {
 	go this.ioLoop(ep)
 }
 
-func (this *mq) ioLoop(ep nano.Endpoint) {
+func (this *broker) ioLoop(ep nano.Endpoint) {
 	// handshake for mq protocol version magic
 	protocolMagic, err := this.handshake(ep)
 	if err != nil {
@@ -37,7 +37,7 @@ func (this *mq) ioLoop(ep nano.Endpoint) {
 	var prot Protocol
 	switch protocolMagic {
 	case 1:
-		prot = &protocolV1{mq: this, ep: ep}
+		prot = &protocolV1{broker: this, ep: ep}
 
 	default:
 		nano.Debugf("invalid protocol")
@@ -48,7 +48,7 @@ func (this *mq) ioLoop(ep nano.Endpoint) {
 	prot.IOLoop(ep)
 }
 
-func (this *mq) handshake(ep nano.Endpoint) (protocolMagic int, err error) {
+func (this *broker) handshake(ep nano.Endpoint) (protocolMagic int, err error) {
 	msg := nano.NewMessage(2)
 	msg.Body = msg.Body[:2]
 	msg.Body[0] = 0
@@ -70,11 +70,11 @@ func (this *mq) handshake(ep nano.Endpoint) (protocolMagic int, err error) {
 	return
 }
 
-func (this *mq) RemoveEndpoint(subscriber nano.Endpoint) {
+func (this *broker) RemoveEndpoint(subscriber nano.Endpoint) {
 
 }
 
-func (this *mq) Shutdown(expire time.Time) {
+func (this *broker) Shutdown(expire time.Time) {
 	this.Lock()
 	topics := make([]*Topic, 0)
 	for _, t := range this.topicMap {
@@ -88,7 +88,7 @@ func (this *mq) Shutdown(expire time.Time) {
 
 }
 
-func (this *mq) getTopic(topicName string) *Topic {
+func (this *broker) getTopic(topicName string) *Topic {
 	this.Lock()
 	if t, present := this.topicMap[topicName]; present {
 		this.Unlock()
@@ -101,22 +101,22 @@ func (this *mq) getTopic(topicName string) *Topic {
 	return t
 }
 
-func (this *mq) SetOption(name string, val interface{}) error {
+func (this *broker) SetOption(name string, val interface{}) error {
 	return nil
 }
 
-func (this *mq) GetOption(name string) (interface{}, error) {
+func (this *broker) GetOption(name string) (interface{}, error) {
 	return nil, nil
 }
 
-func (*mq) Number() uint16 {
+func (*broker) Number() uint16 {
 	return nano.ProtoMq
 }
 
-func (*mq) PeerNumber() uint16 {
+func (*broker) PeerNumber() uint16 {
 	return nano.ProtoMq
 }
 
-func NewSocket() nano.Socket {
-	return nano.MakeSocket(&mq{})
+func NewBrokerSocket() nano.Socket {
+	return nano.MakeSocket(&broker{})
 }

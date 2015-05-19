@@ -7,8 +7,8 @@ import (
 )
 
 type protocolV1 struct {
-	mq *mq
-	ep nano.Endpoint
+	broker *broker
+	ep     nano.Endpoint
 }
 
 func (this *protocolV1) IOLoop(ep nano.Endpoint) {
@@ -68,8 +68,8 @@ func (this *protocolV1) execute(params [][]byte, m *nano.Message) {
 }
 
 func (this *protocolV1) sender(ep nano.Endpoint) {
-	sendChan := this.mq.sock.SendChannel()
-	closeChan := this.mq.sock.CloseChannel()
+	sendChan := this.broker.sock.SendChannel()
+	closeChan := this.broker.sock.CloseChannel()
 
 	for {
 		select {
@@ -98,7 +98,7 @@ func (this *protocolV1) PUB(args [][]byte, m *nano.Message) {
 	nano.Debugf("topic:%s body:%s", topicName, string(body))
 	msg := nano.NewMessage(len(body))
 	msg.Body = body
-	t := this.mq.getTopic(topicName)
+	t := this.broker.getTopic(topicName)
 	t.PutMessage(msg)
 
 	// send OK ack
@@ -111,7 +111,7 @@ func (this *protocolV1) FIN(args [][]byte, m *nano.Message) {
 func (this *protocolV1) SUB(args [][]byte, m *nano.Message) {
 	topicName := string(args[0])
 	channelName := string(args[1])
-	t := this.mq.getTopic(topicName)
+	t := this.broker.getTopic(topicName)
 	c := t.GetChannel(channelName)
 	c.AddEndpoint(this.ep)
 }
