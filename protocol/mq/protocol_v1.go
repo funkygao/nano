@@ -13,6 +13,7 @@ type protocolV1 struct {
 
 func (this *protocolV1) IOLoop(ep nano.Endpoint) {
 	nano.Debugf("endpoint: %d", ep.Id())
+
 	this.ep = ep
 
 	go this.sender(ep)
@@ -45,24 +46,6 @@ func (this *protocolV1) IOLoop(ep nano.Endpoint) {
 	}
 }
 
-func (this *protocolV1) sender(ep nano.Endpoint) {
-	sendChan := this.mq.sock.SendChannel()
-	closeChan := this.mq.sock.CloseChannel()
-
-	for {
-		select {
-		case <-closeChan:
-			return
-
-		case msg := <-sendChan:
-			if err := ep.SendMsg(msg); err != nil {
-				return
-			}
-			ep.Flush()
-		}
-	}
-}
-
 func (this *protocolV1) execute(params [][]byte, m *nano.Message) {
 	switch {
 	case bytes.Equal(params[0], []byte("FIN")):
@@ -84,6 +67,24 @@ func (this *protocolV1) execute(params [][]byte, m *nano.Message) {
 
 }
 
+func (this *protocolV1) sender(ep nano.Endpoint) {
+	sendChan := this.mq.sock.SendChannel()
+	closeChan := this.mq.sock.CloseChannel()
+
+	for {
+		select {
+		case <-closeChan:
+			return
+
+		case msg := <-sendChan:
+			if err := ep.SendMsg(msg); err != nil {
+				return
+			}
+			ep.Flush()
+		}
+	}
+}
+
 func (this *protocolV1) checkAuth() {
 
 }
@@ -99,6 +100,8 @@ func (this *protocolV1) PUB(args [][]byte, m *nano.Message) {
 	msg.Body = body
 	t := this.mq.getTopic(topicName)
 	t.PutMessage(msg)
+
+	// send OK ack
 }
 
 func (this *protocolV1) FIN(args [][]byte, m *nano.Message) {

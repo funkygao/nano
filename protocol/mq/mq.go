@@ -8,21 +8,23 @@ import (
 )
 
 type mq struct {
-	sock nano.ProtocolSocket
-
+	sock     nano.ProtocolSocket
 	topicMap map[string]*Topic
-
 	sync.RWMutex
 }
 
 func (this *mq) Init(sock nano.ProtocolSocket) {
 	this.sock = sock
+	this.initializeTopics()
+}
+
+func (this *mq) initializeTopics() {
+	// TODO read from mysql and build topics
 	this.topicMap = make(map[string]*Topic)
 }
 
 func (this *mq) AddEndpoint(ep nano.Endpoint) {
 	go this.ioLoop(ep)
-	//go nano.NullRecv(ep)
 }
 
 func (this *mq) ioLoop(ep nano.Endpoint) {
@@ -31,8 +33,6 @@ func (this *mq) ioLoop(ep nano.Endpoint) {
 	if err != nil {
 		return
 	}
-
-	nano.Debugf("handshake done")
 
 	var prot Protocol
 	switch protocolMagic {
@@ -75,6 +75,16 @@ func (this *mq) RemoveEndpoint(subscriber nano.Endpoint) {
 }
 
 func (this *mq) Shutdown(expire time.Time) {
+	this.Lock()
+	topics := make([]*Topic, 0)
+	for _, t := range this.topicMap {
+		topics = append(topics, t)
+	}
+	this.Unlock()
+
+	for _, t := range topics {
+		t.Close()
+	}
 
 }
 

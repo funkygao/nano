@@ -19,6 +19,10 @@ func (this *Topic) GetChannel(channelName string) *Channel {
 	return nil
 }
 
+func (this *Topic) Close() {
+
+}
+
 func (this *Topic) messagePump() {
 
 }
