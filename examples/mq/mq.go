@@ -51,6 +51,9 @@ func pub() {
 	sock := mq.NewPubSocket()
 	sock.SetOption(nano.OptionWriteQLen, 2)
 	transport.AddAll(sock)
+	// can dial N servers, but sock.Send only pick one server
+	// because the send channel is shared within the socket
+	dieIfErr(sock.Dial(addr))
 	dieIfErr(sock.Dial(addr))
 
 	i := 0
