@@ -12,7 +12,13 @@ type protocolV1 struct {
 }
 
 func (this *protocolV1) IOLoop(ep nano.Endpoint) {
+	nano.Debugf("endpoint: %d", ep.Id())
 	this.ep = ep
+
+	go this.sender(ep)
+
+	//recvChan := this.ctx.mq.sock.RecvChannel()
+	//closeChan := this.ctx.mq.sock.CloseChannel()
 
 	var msg *nano.Message
 	for {
@@ -27,7 +33,33 @@ func (this *protocolV1) IOLoop(ep nano.Endpoint) {
 		params := bytes.Split(line, []byte{' '})
 		this.execute(params, msg)
 
+		// will not feed upper reader
 		msg.Free()
+
+		/*
+			select {
+			//case recvChan <- msg:
+			case <-closeChan:
+				return
+			}*/
+	}
+}
+
+func (this *protocolV1) sender(ep nano.Endpoint) {
+	sendChan := this.ctx.mq.sock.SendChannel()
+	closeChan := this.ctx.mq.sock.CloseChannel()
+
+	for {
+		select {
+		case <-closeChan:
+			return
+
+		case msg := <-sendChan:
+			if err := ep.SendMsg(msg); err != nil {
+				return
+			}
+			ep.Flush()
+		}
 	}
 }
 
@@ -60,10 +92,12 @@ func (this *protocolV1) PUB(args [][]byte, m *nano.Message) {
 	this.checkAuth()
 
 	topicName := string(args[0])
-	t := this.ctx.mq.getTopic(topicName)
+
 	body := m.ReadFull()
+	nano.Debugf("topic:%s body:%s", topicName, string(body))
 	msg := nano.NewMessage(len(body))
 	msg.Body = body
+	t := this.ctx.mq.getTopic(topicName)
 	t.PutMessage(msg)
 }
 

@@ -36,14 +36,15 @@ func sub() {
 
 func pub() {
 	sock := mq.NewSocket()
+	sock.SetOption(nano.OptionWriteQLen, 2)
 	transport.AddAll(sock)
 	dieIfErr(sock.Dial(addr))
 
-	body := []byte("hello")
+	body := []byte("PUB x\nhello")
 	for {
 		sock.Send(body)
 
-		time.Sleep(time.Second * 2)
+		time.Sleep(time.Second * 5)
 	}
 
 }

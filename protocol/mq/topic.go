@@ -1,8 +1,6 @@
 package mq
 
 import (
-	"sync"
-
 	"github.com/funkygao/nano"
 )
 

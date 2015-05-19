@@ -17,6 +17,7 @@ type mq struct {
 
 func (this *mq) Init(sock nano.ProtocolSocket) {
 	this.sock = sock
+	this.topicMap = make(map[string]*Topic)
 }
 
 func (this *mq) AddEndpoint(ep nano.Endpoint) {
@@ -31,12 +32,16 @@ func (this *mq) ioLoop(ep nano.Endpoint) {
 		return
 	}
 
+	nano.Debugf("handshake done")
+
 	var prot Protocol
 	switch protocolMagic {
 	case 1:
 		prot = &protocolV1{ctx: &context{this}, ep: ep}
 
 	default:
+		nano.Debugf("invalid protocol")
+		ep.Close()
 		return
 	}
 
@@ -45,6 +50,7 @@ func (this *mq) ioLoop(ep nano.Endpoint) {
 
 func (this *mq) handshake(ep nano.Endpoint) (protocolMagic int, err error) {
 	msg := nano.NewMessage(2)
+	msg.Body = msg.Body[:2]
 	msg.Body[0] = 0
 	msg.Body[1] = 1
 	if err = ep.SendMsg(msg); err != nil {
@@ -81,6 +87,7 @@ func (this *mq) getTopic(topicName string) *Topic {
 
 	t := NewTopic(topicName, &context{mq: this})
 	this.topicMap[topicName] = t
+	this.Unlock()
 	return t
 }
 
