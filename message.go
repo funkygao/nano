@@ -46,9 +46,11 @@ func (this *Message) Free() (recycled bool) {
 	if refCount > 0 {
 		return false
 	} else if refCount < 0 {
-		Debugf("overfree: %+v", *this)
+		Debugf("overfree: %s %+v", string(this.Body), *this)
 		return true
 	}
+
+	Debugf("recycled %+v", *this)
 
 	// safe to put back message pool for later reuse
 	var ch chan *Message

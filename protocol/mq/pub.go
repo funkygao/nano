@@ -7,6 +7,7 @@ import (
 	"github.com/funkygao/nano"
 )
 
+// a conn with a broker
 type pubEp struct {
 	ep      nano.Endpoint
 	msgChan chan *nano.Message
@@ -20,11 +21,8 @@ func (this *pubEp) sendToBroker() {
 		}
 
 		if this.ep.SendMsg(msg) != nil || this.ep.Flush() != nil {
-			msg.Free()
 			break
 		}
-
-		msg.Free()
 	}
 
 }
@@ -93,6 +91,7 @@ func (this *pub) sender() {
 			this.Lock()
 			for _, b := range this.brokers {
 				m := msg.Dup()
+				nano.Debugf("%+v", m)
 				select {
 				case b.msgChan <- m:
 
@@ -102,7 +101,6 @@ func (this *pub) sender() {
 				}
 			}
 			this.Unlock()
-			msg.Free()
 		}
 	}
 }

@@ -32,7 +32,23 @@ func (this *protocolV1) IOLoop(ep nano.Endpoint) {
 		// trim the '\n'
 		line = line[:len(line)-1]
 		params := bytes.Split(line, []byte{' '})
-		this.execute(params, msg)
+		switch {
+		case bytes.Equal(params[0], []byte("FIN")):
+			this.FIN(params[1:], msg)
+
+		case bytes.Equal(params[0], []byte("SUB")):
+			this.SUB(params[1:], msg)
+
+		case bytes.Equal(params[0], []byte("PUB")):
+			this.PUB(params[1:], msg)
+
+		case bytes.Equal(params[0], []byte("BYE")):
+			this.BYE(params[1:], msg)
+
+		case bytes.Equal(params[0], []byte("AUTH")):
+			this.AUTH(params[1:], msg)
+
+		}
 
 		// will not feed upper reader
 		msg.Free()
@@ -44,27 +60,6 @@ func (this *protocolV1) IOLoop(ep nano.Endpoint) {
 				return
 			}*/
 	}
-}
-
-func (this *protocolV1) execute(params [][]byte, m *nano.Message) {
-	switch {
-	case bytes.Equal(params[0], []byte("FIN")):
-		this.FIN(params[1:], m)
-
-	case bytes.Equal(params[0], []byte("SUB")):
-		this.SUB(params[1:], m)
-
-	case bytes.Equal(params[0], []byte("PUB")):
-		this.PUB(params[1:], m)
-
-	case bytes.Equal(params[0], []byte("BYE")):
-		this.BYE(params[1:], m)
-
-	case bytes.Equal(params[0], []byte("AUTH")):
-		this.AUTH(params[1:], m)
-
-	}
-
 }
 
 func (this *protocolV1) sender(ep nano.Endpoint) {
@@ -81,7 +76,6 @@ func (this *protocolV1) sender(ep nano.Endpoint) {
 			if ep.SendMsg(msg) != nil {
 				return
 			}
-			ep.Flush()
 		}
 	}
 }

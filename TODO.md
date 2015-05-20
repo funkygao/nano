@@ -1,6 +1,7 @@
 TODO
 ====
 
+- [ ] fix messsage.Free recyle problem
 - [ ] batch policy
   can be configured to accumulate no more than a fixed number of messages and to wait no longer than some fixed latency bound
   (say 100 messages or 5 seconds)
