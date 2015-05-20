@@ -23,9 +23,10 @@ func (pe *pubEp) peerSender() {
 		}
 
 		if pe.ep.SendMsg(msg) != nil {
-			msg.Free()
 			break
 		}
+
+		msg.Free()
 	}
 
 	pe.w.Done()
@@ -104,8 +105,8 @@ func (p *pub) sender() {
 					m.Free()
 				}
 			}
-			msg.Free()
 			p.Unlock()
+			msg.Free()
 		}
 	}
 }
