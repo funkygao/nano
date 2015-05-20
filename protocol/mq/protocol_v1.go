@@ -16,7 +16,7 @@ func (this *protocolV1) IOLoop(ep nano.Endpoint) {
 
 	this.ep = ep
 
-	go this.sender(ep)
+	//go this.sender(ep)
 
 	//recvChan := this.ctx.mq.sock.RecvChannel()
 	//closeChan := this.ctx.mq.sock.CloseChannel()
@@ -71,13 +71,14 @@ func (this *protocolV1) sender(ep nano.Endpoint) {
 	sendChan := this.broker.sock.SendChannel()
 	closeChan := this.broker.sock.CloseChannel()
 
+	var msg *nano.Message
 	for {
 		select {
 		case <-closeChan:
 			return
 
-		case msg := <-sendChan:
-			if err := ep.SendMsg(msg); err != nil {
+		case msg = <-sendChan:
+			if ep.SendMsg(msg) != nil {
 				return
 			}
 			ep.Flush()

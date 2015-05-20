@@ -19,8 +19,7 @@ func (this *pubEp) sendToBroker() {
 			break
 		}
 
-		if err := this.ep.SendMsg(msg); err != nil {
-			nano.Debugf(err.Error())
+		if this.ep.SendMsg(msg) != nil || this.ep.Flush() != nil {
 			msg.Free()
 			break
 		}
@@ -28,6 +27,10 @@ func (this *pubEp) sendToBroker() {
 		msg.Free()
 	}
 
+}
+
+func (this *pubEp) Close() {
+	close(this.msgChan)
 }
 
 type pub struct {
@@ -57,10 +60,10 @@ func (this *pub) AddEndpoint(ep nano.Endpoint) {
 	}
 
 	qlen := 16
-	/*
-		if i, err := this.sock.GetOption(nano.OptionWriteQLen); err == nil {
-			//qlen = i.(int)
-		}*/
+	if i, err := this.sock.GetOption(nano.OptionWriteQLen); err == nil {
+		qlen = i.(int)
+	}
+	nano.Debugf("qlen: %d", qlen)
 	this.Lock()
 	b := &pubEp{
 		ep:      ep,
@@ -94,10 +97,9 @@ func (this *pub) sender() {
 				case b.msgChan <- m:
 
 				default:
+					// queue full, drop silently
 					m.Free()
-
 				}
-				b.msgChan <- msg
 			}
 			this.Unlock()
 			msg.Free()
@@ -114,15 +116,27 @@ func (this *pub) RemoveEndpoint(ep nano.Endpoint) {
 }
 
 func (this *pub) Shutdown(expire time.Time) {
+	this.waiter.WaitAbsTimeout(expire)
+
+	this.Lock()
+	brokers := make([]*pubEp, 0)
+	for _, b := range this.brokers {
+		brokers = append(brokers, b)
+	}
+	this.Unlock()
+
+	for _, b := range brokers {
+		b.Close()
+	}
 
 }
 
 func (this *pub) SetOption(name string, val interface{}) error {
-	return nil
+	return nano.ErrBadOption
 }
 
 func (this *pub) GetOption(name string) (interface{}, error) {
-	return nil, nil
+	return nil, nano.ErrBadOption
 }
 
 func (*pub) Number() uint16 {
@@ -137,6 +151,7 @@ func NewPubSocket() nano.Socket {
 	return nano.MakeSocket(&pub{})
 }
 
-func Pub(topic string) {
+func Pub(sock nano.Socket, topic string) {
+	sock.Send(nil)
 
 }

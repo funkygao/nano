@@ -24,6 +24,7 @@ func (this *broker) initializeTopics() {
 }
 
 func (this *broker) AddEndpoint(ep nano.Endpoint) {
+	// ep can be pub or sub
 	go this.ioLoop(ep)
 }
 

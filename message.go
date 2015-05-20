@@ -46,6 +46,7 @@ func (this *Message) Free() (recycled bool) {
 	if refCount > 0 {
 		return false
 	} else if refCount < 0 {
+		Debugf("overfree: %+v", *this)
 		return true
 	}
 

@@ -1,6 +1,9 @@
 TODO
 ====
 
+- [ ] batch policy
+  can be configured to accumulate no more than a fixed number of messages and to wait no longer than some fixed latency bound
+  (say 100 messages or 5 seconds)
 - [X] sync.Pool and bytes.Buffer
 - [X] optional handshake
 - [ ] benchmark shows mem leakage
@@ -28,3 +31,7 @@ TODO
 - compact stale log
 - sendfile
 - timeout
+
+Our topic is divided into a set of totally ordered partitions, each of which is consumed by one consumer at any given time. 
+
+A message is considered "committed" when all in sync replicas for that partition have applied it to their log. Only committed messages are ever given out to the consumer. 
